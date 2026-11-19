@@ -2030,7 +2030,7 @@ export const CITY = (() => {
   // inspector opens it too (houses list their ROOMS). The chunk pass's
   // wild content (belt trees, groves, paddocks, rocks, ponds) moves out
   // past the ring, so nothing wild grows in the yards.
-  let SUB_IN0 = 365, SUB_INNER = null, SUB_BRIDGE = 90;   // v2.75: inner radius (smallest / per bearing) + bridge annulus width
+  let SUB_IN0 = 365, SUB_INNER = null, SUB_BRIDGE = 90;   // v2.76: inner radius (smallest / per bearing) + bridge annulus width
   let SUB_R0 = 865;                    // v2.74: set per build — 585 hugging real OSM data (±360 m), 865 for generated cities
   const SUB_R1 = 2360;   // the ring (CITY_R 745 + verge → +1615) — v2.65: the base every city's DNA scales
   let suburbRec = null;
@@ -2042,7 +2042,7 @@ export const CITY = (() => {
   // are gone — js/suburbs.js lays a street pattern per region (grid,
   // winding, lattice, superblock) inside a ragged per-city outline.
   function addSuburbRoads(meta, ax, az) {
-    // v2.75: streets start at the downtown's own edge (SUB_IN, per bearing)
+    // v2.76: streets start at the downtown's own edge (SUB_IN, per bearing)
     // instead of a fixed 585/865 m verge, so the grid runs straight into them
     return suburbRoads(meta, ax, az, SUB_IN0, SUB_INNER);
   }
@@ -2321,7 +2321,7 @@ export const CITY = (() => {
     // v2.65 CITY DNA: the house cap rides the ring's AREA (sub²) — a metro
     // that sprawls 40% wider grows ~2× the houses, a town that tightens
     // sheds them (capped at 1600 so the merged buffers stay bounded)
-    const MAXH = Math.min(2300 + 350, Math.round((isMob ? 520 : (city.tier === 3 ? 1700 : city.tier === 1 ? 1150 : 1480)) * dna.sub * dna.sub) + (isMob ? 90 : 350));   // v2.75: + the apron's share   // v2.74: ~1.8x — houses reach further out along the new streets
+    const MAXH = Math.min(2300 + 350, Math.round((isMob ? 520 : (city.tier === 3 ? 1700 : city.tier === 1 ? 1150 : 1480)) * dna.sub * dna.sub) + (isMob ? 90 : 350));   // v2.76: + the apron's share   // v2.74: ~1.8x — houses reach further out along the new streets
     // v2.65: warm↔cool house palette + the city's rotated slice of it
     const warmP = Math.max(.12, Math.min(.95, .62 + dna.warm));
     const sreg = dna.region;   // v2.69 REGIONAL CHARACTER: the houses wear the region's palettes too
@@ -2436,7 +2436,7 @@ export const CITY = (() => {
       const dOf = rd => { let m = 1e9; for (const p of rd.pts) m = Math.min(m, Math.hypot(p[0] - axc, p[1] - azc)); return m; };
       return dOf(a) - dOf(b);
     });
-    // v2.75 NO BARE APRON: downtown streets that run out past the dense core
+    // v2.76 NO BARE APRON: downtown streets that run out past the dense core
     // (the OSM data's edge, the generated grid's last blocks) used to stand
     // empty until the suburb streets began. They now take house lots too —
     // only where the frontage is genuinely free (no building within ~18 m)
@@ -2477,7 +2477,7 @@ export const CITY = (() => {
             }
             // v2.63: never on an imported downtown building
             if (onBuilding(lx, lz, lotHW, lotHD)) continue;
-            if (!rd.sub && (rr < APRON_R || onBuilding(lx, lz, lotHW + 18, lotHD + 18))) continue;   // v2.75: apron lots need free frontage
+            if (!rd.sub && (rr < APRON_R || onBuilding(lx, lz, lotHW + 18, lotHD + 18))) continue;   // v2.76: apron lots need free frontage
             // clear of every street's asphalt — crossings stay open
             const dq = distToRoad(lx, lz);
             if (dq.rd && dq.d < dq.rd.w / 2 + 4) continue;
@@ -2929,7 +2929,7 @@ export const CITY = (() => {
   // ends where the water begins — the shore shapes the city, like in the
   // real world. (The planet's land shield still shows between the last
   // tile and the waterline, so nothing floats.)
-  // v2.75 FEATHERED GROUND: with `fade(x, z)` (0..1) the plate is laid on a
+  // v2.76 FEATHERED GROUND: with `fade(x, z)` (0..1) the plate is laid on a
   // finer lattice and each vertex carries that alpha, so the city ground
   // dissolves into the surrounding land instead of ending in a hard edge.
   function shorePlate(ax, az, size, y, tex, keep, N, fade) {
@@ -3011,7 +3011,7 @@ export const CITY = (() => {
     const coreMeta = cityMeta;
     const inCore = (x, z) => { const dx = x - ax, dz = z - az; return Math.hypot(dx, dz) <= coreR(coreMeta, Math.atan2(dz, dx)) * coreK; };
     const coreK = cityData.source === 'osm' ? 1 : 1.5;   // generated fallback cities span ±662 m
-    // v2.75: suburb streets begin 28 m outside the trimmed downtown edge
+    // v2.76: suburb streets begin 28 m outside the trimmed downtown edge
     SUB_INNER = a => coreR(coreMeta, a) * coreK + 28;
     SUB_IN0 = 340 * coreK + 28; SUB_BRIDGE = 90 * coreK + 70;
     const trimCore = !cityData.pasture;
@@ -3206,7 +3206,7 @@ export const CITY = (() => {
         }
         return false;
       };
-      // v2.75 FEATHERED GROUND: full city ground within ~45 m of a building or
+      // v2.76 FEATHERED GROUND: full city ground within ~45 m of a building or
       // street, easing to nothing by ~150 m — the plate melts into the land
       // under the neighborhoods instead of stopping at a hard tan edge.
       const F0 = 45, F1 = 150;

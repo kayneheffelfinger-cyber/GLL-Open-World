@@ -341,12 +341,11 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.75 — OWN POWER', `
-    <p><b>Build your own power.</b></p>
-    <div class="kv"><span class="k">GENERATORS</span><span class="v">POWER panel → build solar, wind (land or sea), hydro (real OSM rivers only), coal and oil burners</span></div>
-    <div class="kv"><span class="k">OWN POWER</span><span class="v">feeds your businesses first — not metered, not billed — and sells the surplus at the grid price</span></div>
-    <div class="kv"><span class="k">CAPACITY</span><span class="v">demand vs capacity vs supply, live, in the POWER and Empire panels</span></div>
-    <div class="kv"><span class="k">BLACKOUTS</span><span class="v">when the utility feeder fails, businesses your units can't cover go dark until supply returns</span></div>
+  openModal('Welcome to v2.76 — REAL WINDOWS', `
+    <p><b>Buildings get real windows, and the city edge disappears.</b></p>
+    <div class="kv"><span class="k">WINDOWS</span><span class="v">every facade now shows true rows and columns of framed glass, lit and dark, close up and from the high view</span></div>
+    <div class="kv"><span class="k">SEAMLESS EDGE</span><span class="v">the city ground fades into the land and the neighborhood streets begin where downtown ends</span></div>
+    <div class="kv"><span class="k">HOUSES</span><span class="v">low-rise lots now line the outer downtown streets, so density falls off gradually</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }

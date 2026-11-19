@@ -261,7 +261,7 @@ export function layoutOf(meta) {
 }
 
 // the city's whole suburban street list, world coordinates (anchor added)
-// v2.75: optional `inner(angle)` = the inner radius at that bearing (r0 stays
+// v2.76: optional `inner(angle)` = the inner radius at that bearing (r0 stays
 // the smallest of them). city.js passes the downtown's own ragged edge so the
 // streets begin where the core ends, at every angle, with no bare band.
 export function suburbRoads(meta, ax, az, r0, inner) {
