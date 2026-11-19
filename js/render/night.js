@@ -341,11 +341,11 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.68 — RUSH HOUR', `
-    <p><b>The streets finally move.</b></p>
-    <div class="kv"><span class="k">TRAFFIC</span><span class="v">cars drive the real road net — right-hand lanes, class speeds (motorway to side street), full stops for you at the curb</span></div>
-    <div class="kv"><span class="k">STREET SMART</span><span class="v">cars queue bumper-to-bumper, hop to connected streets at the ends, and only U-turn at dead ends</span></div>
-    <div class="kv"><span class="k">THE FLEET</span><span class="v">20/30/40 cars by city tier (halved on phones and LITE detail), taxis included — same look as the parked rows</span></div>
+  openModal('Welcome to v2.69 — REGIONAL CHARACTER', `
+    <p><b>Every city now looks like where it is.</b></p>
+    <div class="kv"><span class="k">REGIONS</span><span class="v">13 ways the world builds — brick and steel, stucco, whitewash, zinc mansards, sand, glass supertowers — each with its own colors and roofs</span></div>
+    <div class="kv"><span class="k">FLAT OR PITCHED</span><span class="v">Cairo, Athens and Dubai build flat roofs; Amsterdam, Vienna and Berlin keep the gables</span></div>
+    <div class="kv"><span class="k">LANDMARKS</span><span class="v">One World Trade, Willis Tower, Burj Khalifa, Taipei 101, Hagia Sophia, the Spire of Dublin and more, standing at their real spots</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }
