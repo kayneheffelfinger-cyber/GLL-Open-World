@@ -341,11 +341,11 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.77 — SKYLINE', `
-    <p><b>Neighboring buildings finally look different.</b></p>
-    <div class="kv"><span class="k">SETBACKS</span><span class="v">mid-rises step in and slide to one side, with a lighter terrace below</span></div>
-    <div class="kv"><span class="k">CROWNS</span><span class="v">towers carry penthouses and masts instead of flat tops</span></div>
-    <div class="kv"><span class="k">ROOFS</span><span class="v">green roofs, parapets and accent roof colors across the low and mid-rise blocks</span></div>
+  openModal('Welcome to v2.78 — COMPANY GROUNDWORK', `
+    <p><b>Companies and stocks are on the way.</b></p>
+    <div class="kv"><span class="k">COMPANIES</span><span class="v">shared bank, partners, roles — coming soon on the hosted site</span></div>
+    <div class="kv"><span class="k">STOCKS</span><span class="v">every company gets its own stock — coming soon</span></div>
+    <div class="kv"><span class="k">TODAY</span><span class="v">nothing changes: it stays hidden until the server turns it on</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }
