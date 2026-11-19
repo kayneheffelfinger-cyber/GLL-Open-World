@@ -2030,6 +2030,7 @@ export const CITY = (() => {
   // inspector opens it too (houses list their ROOMS). The chunk pass's
   // wild content (belt trees, groves, paddocks, rocks, ponds) moves out
   // past the ring, so nothing wild grows in the yards.
+  let SUB_IN0 = 365, SUB_INNER = null, SUB_BRIDGE = 90;   // v2.75: inner radius (smallest / per bearing) + bridge annulus width
   let SUB_R0 = 865;                    // v2.74: set per build — 585 hugging real OSM data (±360 m), 865 for generated cities
   const SUB_R1 = 2360;   // the ring (CITY_R 745 + verge → +1615) — v2.65: the base every city's DNA scales
   let suburbRec = null;
@@ -2041,7 +2042,9 @@ export const CITY = (() => {
   // are gone — js/suburbs.js lays a street pattern per region (grid,
   // winding, lattice, superblock) inside a ragged per-city outline.
   function addSuburbRoads(meta, ax, az) {
-    return suburbRoads(meta, ax, az, SUB_R0 + 15);
+    // v2.75: streets start at the downtown's own edge (SUB_IN, per bearing)
+    // instead of a fixed 585/865 m verge, so the grid runs straight into them
+    return suburbRoads(meta, ax, az, SUB_IN0, SUB_INNER);
   }
 
   // ---------- v2.63 ONE NETWORK: every road reaches every other -------
@@ -2234,7 +2237,7 @@ export const CITY = (() => {
       for (const e of [0, r.pts.length - 1]) {
         const p = r.pts[e];
         if (e > 0 && Math.hypot(p[0] - r.pts[0][0], p[1] - r.pts[0][1]) < 30) continue;   // closed loop: one end
-        if (Math.hypot(p[0] - ax, p[1] - az) > SUB_R0 + 90) continue;      // outer tips are cul-de-sacs by design
+        if (Math.hypot(p[0] - ax, p[1] - az) > SUB_IN0 + SUB_BRIDGE) continue;      // outer tips are cul-de-sacs by design
         if (bridgedOrigins.some(q => Math.hypot(q[0] - p[0], q[1] - p[1]) < 30)) continue;   // cluster served
         let best = null, bd = 1e9;
         near(p[0], p[1], 360, s => {
@@ -2318,7 +2321,7 @@ export const CITY = (() => {
     // v2.65 CITY DNA: the house cap rides the ring's AREA (sub²) — a metro
     // that sprawls 40% wider grows ~2× the houses, a town that tightens
     // sheds them (capped at 1600 so the merged buffers stay bounded)
-    const MAXH = Math.min(2300, Math.round((isMob ? 520 : (city.tier === 3 ? 1700 : city.tier === 1 ? 1150 : 1480)) * dna.sub * dna.sub));   // v2.74: ~1.8x — houses reach further out along the new streets
+    const MAXH = Math.min(2300 + 350, Math.round((isMob ? 520 : (city.tier === 3 ? 1700 : city.tier === 1 ? 1150 : 1480)) * dna.sub * dna.sub) + (isMob ? 90 : 350));   // v2.75: + the apron's share   // v2.74: ~1.8x — houses reach further out along the new streets
     // v2.65: warm↔cool house palette + the city's rotated slice of it
     const warmP = Math.max(.12, Math.min(.95, .62 + dna.warm));
     const sreg = dna.region;   // v2.69 REGIONAL CHARACTER: the houses wear the region's palettes too
@@ -2433,7 +2436,15 @@ export const CITY = (() => {
       const dOf = rd => { let m = 1e9; for (const p of rd.pts) m = Math.min(m, Math.hypot(p[0] - axc, p[1] - azc)); return m; };
       return dOf(a) - dOf(b);
     });
-    for (const rd of ordered) {
+    // v2.75 NO BARE APRON: downtown streets that run out past the dense core
+    // (the OSM data's edge, the generated grid's last blocks) used to stand
+    // empty until the suburb streets began. They now take house lots too —
+    // only where the frontage is genuinely free (no building within ~18 m)
+    // and only beyond APRON_R, so towers never get houses squeezed between.
+    const APRON_R = 230;
+    const apronRoads = roads.filter(r => !r.sub && !r.link && r.cls < 3 && r.pts.length > 1);
+    const lotRoads = ordered.concat(apronRoads);
+    for (const rd of lotRoads) {
       // v2.65 CITY DNA: lot width rides the villa scale — compact rows
       // in dense towns, generous lots in villa country
       const LOTW = Math.min(40, (21 + rnd() * 6) * dna.villa);
@@ -2466,6 +2477,7 @@ export const CITY = (() => {
             }
             // v2.63: never on an imported downtown building
             if (onBuilding(lx, lz, lotHW, lotHD)) continue;
+            if (!rd.sub && (rr < APRON_R || onBuilding(lx, lz, lotHW + 18, lotHD + 18))) continue;   // v2.75: apron lots need free frontage
             // clear of every street's asphalt — crossings stay open
             const dq = distToRoad(lx, lz);
             if (dq.rd && dq.d < dq.rd.w / 2 + 4) continue;
@@ -2917,7 +2929,10 @@ export const CITY = (() => {
   // ends where the water begins — the shore shapes the city, like in the
   // real world. (The planet's land shield still shows between the last
   // tile and the waterline, so nothing floats.)
-  function shorePlate(ax, az, size, y, tex, keep, N) {
+  // v2.75 FEATHERED GROUND: with `fade(x, z)` (0..1) the plate is laid on a
+  // finer lattice and each vertex carries that alpha, so the city ground
+  // dissolves into the surrounding land instead of ending in a hard edge.
+  function shorePlate(ax, az, size, y, tex, keep, N, fade) {
     if (!LANDGEO.ready) {
       const base = new THREE.Mesh(new THREE.PlaneGeometry(size, size),
         new THREE.MeshLambertMaterial({ map: tex }));
@@ -2928,7 +2943,9 @@ export const CITY = (() => {
     }
     N = N || 20;
     const T = size / N;
-    const pos = [], uv = [];
+    const pos = [], uv = [], alp = [];
+    const fv = fade ? new Float32Array((N + 1) * (N + 1)) : null;   // alpha per lattice vertex
+    if (fv) for (let i = 0; i <= N; i++) for (let j = 0; j <= N; j++) fv[i * (N + 1) + j] = fade(ax - size / 2 + i * T, az - size / 2 + j * T);
     for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
       const x0 = ax - size / 2 + i * T, z0 = az - size / 2 + j * T;
       const x1 = x0 + T, z1 = z0 + T;
@@ -2937,17 +2954,25 @@ export const CITY = (() => {
           LANDGEO.isWaterWorld(x0, z1) || LANDGEO.isWaterWorld(x1, z1) ||
           LANDGEO.isWaterWorld((x0 + x1) / 2, (z0 + z1) / 2)) continue;
       if (keep && !keep((x0 + x1) / 2, (z0 + z1) / 2)) continue;   // v2.74: organic footprint
+      if (fv && fv[i * (N + 1) + j] + fv[(i + 1) * (N + 1) + j] + fv[i * (N + 1) + j + 1] + fv[(i + 1) * (N + 1) + j + 1] < .004) continue;
       const u0 = i / N, u1 = (i + 1) / N, v0 = j / N, v1 = (j + 1) / N;
       // v2.27: emitted ANCHOR-LOCAL; the mesh carries the anchor
       const lx0 = x0 - ax, lz0 = z0 - az, lx1 = x1 - ax, lz1 = z1 - az;
       pos.push(lx0, y, lz1, lx1, y, lz1, lx1, y, lz0, lx0, y, lz1, lx1, y, lz0, lx0, y, lz0);
       uv.push(u0, v1, u1, v1, u1, v0, u0, v1, u1, v0, u0, v0);
+      if (fv) {
+        const a00 = fv[i * (N + 1) + j], a10 = fv[(i + 1) * (N + 1) + j], a01 = fv[i * (N + 1) + j + 1], a11 = fv[(i + 1) * (N + 1) + j + 1];
+        for (const a of [a01, a11, a10, a01, a10, a00]) alp.push(1, 1, 1, a);   // same vertex order as pos above
+      }
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     g.setAttribute('normal', new THREE.Float32BufferAttribute(pos.map((_, i) => i % 3 === 1 ? 1 : 0), 3));
     g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-    const mesh = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: tex }));
+    if (fv) g.setAttribute('color', new THREE.Float32BufferAttribute(alp, 4));
+    const mesh = new THREE.Mesh(g, new THREE.MeshLambertMaterial(fv
+      ? { map: tex, vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }
+      : { map: tex }));
     mesh.position.set(ax, 0, az);   // v2.27: city-local geometry
     mesh.renderOrder = 1.6;   // v2.37 flat-ground ladder: city plate (literal — outside the WORLD closure)
     mesh.receiveShadow = true;
@@ -2986,6 +3011,9 @@ export const CITY = (() => {
     const coreMeta = cityMeta;
     const inCore = (x, z) => { const dx = x - ax, dz = z - az; return Math.hypot(dx, dz) <= coreR(coreMeta, Math.atan2(dz, dx)) * coreK; };
     const coreK = cityData.source === 'osm' ? 1 : 1.5;   // generated fallback cities span ±662 m
+    // v2.75: suburb streets begin 28 m outside the trimmed downtown edge
+    SUB_INNER = a => coreR(coreMeta, a) * coreK + 28;
+    SUB_IN0 = 340 * coreK + 28; SUB_BRIDGE = 90 * coreK + 70;
     const trimCore = !cityData.pasture;
     if (trimCore) {
       const cut = [];
@@ -3178,7 +3206,23 @@ export const CITY = (() => {
         }
         return false;
       };
-      group.add(shorePlate(ax, az, 1490, .012, getGroundTex(), keep, 60));
+      // v2.75 FEATHERED GROUND: full city ground within ~45 m of a building or
+      // street, easing to nothing by ~150 m — the plate melts into the land
+      // under the neighborhoods instead of stopping at a hard tan edge.
+      const F0 = 45, F1 = 150;
+      const fade = (x, z) => {
+        const cx = Math.floor(x / MC), cz = Math.floor(z / MC);
+        let best = 1e9;
+        for (let i = -4; i <= 4; i++) for (let j = -4; j <= 4; j++) {
+          const a = mk.get((cx + i) + ',' + (cz + j)); if (!a) continue;
+          for (let k = 0; k < a.length; k += 2) { const d = Math.hypot(a[k] - x, a[k + 1] - z); if (d < best) best = d; }
+        }
+        if (best >= F1) return 0;
+        for (const w of waterPolys) if (inPoly(x, z, w.poly)) return 0;
+        const t = best <= F0 ? 0 : (best - F0) / (F1 - F0);
+        return 1 - t * t * (3 - 2 * t);
+      };
+      group.add(shorePlate(ax, az, 1490, .012, getGroundTex(), null, 124, fade));
     }
     onStatus && onStatus('Laying out the street grid…'); await _tick();
     buildRoads(shifted);

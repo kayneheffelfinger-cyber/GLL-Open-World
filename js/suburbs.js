@@ -261,12 +261,15 @@ export function layoutOf(meta) {
 }
 
 // the city's whole suburban street list, world coordinates (anchor added)
-export function suburbRoads(meta, ax, az, r0) {
+// v2.75: optional `inner(angle)` = the inner radius at that bearing (r0 stays
+// the smallest of them). city.js passes the downtown's own ragged edge so the
+// streets begin where the core ends, at every angle, with no bare band.
+export function suburbRoads(meta, ax, az, r0, inner) {
   r0 = r0 || SUB_R0;
   const dna = cityDNA(meta), layout = layoutOf(meta);
   const rnd = _mulberry(hashStr('sub' + layout + (meta.key || meta.name)));
   const outR = a => outlineR(meta, a, r0);
-  const ok = (x, z) => { const r = Math.hypot(x, z); return r >= r0 && r <= outR(Math.atan2(z, x)); };
+  const ok = (x, z) => { const r = Math.hypot(x, z), a = Math.atan2(z, x); return r >= (inner ? Math.max(r0, inner(a)) : r0) && r <= outR(a); };
   const R = dna.subR1 + 40;
   const roads = LAYOUTS[layout]({ rnd, dna, R, ok, outR, r0 });
   return roads.map(r => ({ pts: r.pts.map(p => [p[0] + ax, p[1] + az]), w: r.w, cls: r.cls, sub: 1, name: r.name }));
