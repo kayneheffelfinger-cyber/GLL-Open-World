@@ -341,10 +341,12 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.80 — SKYLINE II', `
-    <p><b>More variety in the skyline.</b></p>
-    <div class="kv"><span class="k">PODIUMS</span><span class="v">some big towers rise from a wide low base with a roof terrace</span></div>
-    <div class="kv"><span class="k">SOLAR</span><span class="v">dark-blue panel rows on some flat low-rise roofs</span></div>
+  openModal('Welcome to v2.81 — BANKS', `
+    <p><b>Every city has a bank.</b></p>
+    <div class="kv"><span class="k">ACCOUNTS</span><span class="v">open one per city, deposit, withdraw, transfer between your own</span></div>
+    <div class="kv"><span class="k">CARDS</span><span class="v">debit and credit cards with a limit — pay with them from the BANK panel</span></div>
+    <div class="kv"><span class="k">STATEMENTS</span><span class="v">every 30 game days, with interest, minimums and a full ledger</span></div>
+    <div class="kv"><span class="k">NET WORTH</span><span class="v">balances count on the Money List; card debt subtracts</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }
