@@ -60,12 +60,22 @@ function outlineOf(meta) {
 }
 // radius (m) of the city's suburb edge at angle a (radians, atan2(z, x)):
 // always within [78%, 100%] of dna.subR1 and never inside the verge
-export function outlineR(meta, a) {
+export function outlineR(meta, a, r0) {
   const dna = cityDNA(meta), o = outlineOf(meta);
   const h = o.w[0] * Math.sin(2 * a + o.p[0]) + o.w[1] * Math.sin(3 * a + o.p[1]) + o.w[2] * Math.sin(5 * a + o.p[2]) + o.w[3] * Math.sin(8 * a + o.p[3]);
   const wsum = o.w[0] + o.w[1] + o.w[2] + o.w[3];
   const n = .5 + .5 * h / wsum;                    // 0..1
-  return Math.max(SUB_R0 + 260, dna.subR1 * (1 - o.depth * (1 - n)));
+  return Math.max((r0 || SUB_R0) + 260, dna.subR1 * (1 - o.depth * (1 - n)));
+}
+
+// radius (m) at which the imported real-world data (a ±360 m SQUARE, 509 m
+// at the corners) is trimmed: a ragged 340-430 m blob, so the downtown ends
+// in an organic edge instead of the four straight sides of the import box
+export function coreR(meta, a) {
+  const o = outlineOf(meta);
+  const h = o.w[0] * Math.sin(2 * a + o.p[1]) + o.w[1] * Math.sin(3 * a + o.p[2]) + o.w[2] * Math.sin(5 * a + o.p[3]) + o.w[3] * Math.sin(7 * a + o.p[0]);
+  const n = .5 + .5 * h / (o.w[0] + o.w[1] + o.w[2] + o.w[3]);
+  return 340 + 90 * n;
 }
 
 // ---- helpers -----------------------------------------------------------
@@ -93,9 +103,18 @@ function line(th, o, t0, t1, step, warp) {
   return out;
 }
 
+// a smooth low-frequency displacement field: every layout bends with it so
+// no street is ever ruler-straight (amplitude A meters, wavelengths 280-900 m)
+function makeWarp(rnd, A) {
+  const l1 = 320 + rnd() * 260, l2 = 520 + rnd() * 380, l3 = 280 + rnd() * 240;
+  const p1 = rnd() * TAU, p2 = rnd() * TAU, p3 = rnd() * TAU, p4 = rnd() * TAU;
+  return (x, z) => [A * Math.sin(z / l1 + p1) + A * .6 * Math.sin(x / l2 + p2 + z / l3), A * Math.sin(x / l1 + p3) + A * .6 * Math.sin(z / l2 + p4 + x / l3)];
+}
+
 // ---- layouts (each returns [{pts, cls, w, name}] in center-local meters) -
 function gridLayout(ctx) {
   const { rnd, dna, R, ok } = ctx, out = [];
+  const warp = makeWarp(rnd, 40 + rnd() * 25);
   const rot = rnd() * (TAU / 4), S = (112 + rnd() * 46) * (.92 + .1 * dna.villa);
   const every = 3 + Math.floor(rnd() * 2);
   const skipP = .06 + rnd() * .1;
@@ -107,7 +126,7 @@ function gridLayout(ctx) {
       if (Math.abs(o) > R) continue;
       const coll = ((i % every) + every) % every === 0;
       if (!coll && rnd() < skipP) continue;                    // a merged block
-      for (const seg of clip(line(th, o, -R, R, 34), ok, 60)) {
+      for (const seg of clip(line(th, o, -R, R, 34, warp), ok, 60)) {
         out.push({ pts: seg, cls: coll ? 2 : 1, w: coll ? 12.5 : 9,
           name: dir === 0 ? ordinal(++nStreet) + ' Street' : TREES[(nAve++ + Math.floor(rnd() * 3)) % TREES.length] + ' Avenue' });
       }
@@ -115,7 +134,7 @@ function gridLayout(ctx) {
   }
   if (rnd() < .5) {                                            // a diagonal avenue through the grid
     const th = rot + TAU / 8 + (rnd() - .5) * .3, o = (rnd() - .5) * S * 2;
-    for (const seg of clip(line(th, o, -R, R, 34), ok, 100)) out.push({ pts: seg, cls: 2, w: 14, name: 'Grand Diagonal' });
+    for (const seg of clip(line(th, o, -R, R, 34, warp), ok, 100)) out.push({ pts: seg, cls: 2, w: 14, name: 'Grand Diagonal' });
   }
   return out;
 }
@@ -123,7 +142,7 @@ function gridLayout(ctx) {
 function latticeLayout(ctx) {
   const { rnd, dna, R, ok } = ctx, out = [];
   const rot = rnd() * TAU, S = 98 + rnd() * 30;
-  const A = 18 + rnd() * 16, l1 = 240 + rnd() * 180, l2 = 300 + rnd() * 200, l3 = 380 + rnd() * 200;
+  const A = 30 + rnd() * 20, l1 = 240 + rnd() * 180, l2 = 300 + rnd() * 200, l3 = 380 + rnd() * 200;
   const p1 = rnd() * TAU, p2 = rnd() * TAU, p3 = rnd() * TAU, p4 = rnd() * TAU;
   const warp = (x, z) => [A * Math.sin(z / l1 + p1) + A * .5 * Math.sin(x / l2 + p2 + z / l3), A * Math.sin(x / l1 + p3) + A * .5 * Math.sin(z / l2 + p4 + x / l3)];
   const every = 4 + Math.floor(rnd() * 2);
@@ -147,6 +166,7 @@ function latticeLayout(ctx) {
 
 function superblockLayout(ctx) {
   const { rnd, R, ok } = ctx, out = [];
+  const warp = makeWarp(rnd, 45 + rnd() * 25);
   const rot = (rnd() - .5) * .4, S = 215 + rnd() * 70;
   const lines = [];
   for (let dir = 0; dir < 2; dir++) {
@@ -156,7 +176,7 @@ function superblockLayout(ctx) {
       if (Math.abs(o) > R) continue;
       lines.push({ th, o });
       let k = 0;
-      for (const seg of clip(line(th, o, -R, R, 36), ok, 80)) out.push({ pts: seg, cls: 2, w: 15, name: (dir === 0 ? 'Zhong ' : 'Tong ') + ordinal(((i + N) % 40) + 1 + k++ * 0) + ' Avenue' });
+      for (const seg of clip(line(th, o, -R, R, 36, warp), ok, 80)) out.push({ pts: seg, cls: 2, w: 15, name: (dir === 0 ? 'Zhong ' : 'Tong ') + ordinal(((i + N) % 40) + 1 + k++ * 0) + ' Avenue' });
     }
   }
   // comb stubs: from a grid line, a short dead-end into the block behind it
@@ -167,7 +187,7 @@ function superblockLayout(ctx) {
       const side = rnd() < .5 ? 1 : -1, len = 60 + rnd() * 70;
       const sx = c * t - s * L.o, sz = s * t + c * L.o;
       const pts = [];
-      for (let d = 0; d <= len; d += 22) pts.push([sx + nx * d * side, sz + nz * d * side]);
+      for (let d = 0; d <= len; d += 22) { const px = sx + nx * d * side, pz = sz + nz * d * side, w = warp(px, pz); pts.push([px + w[0], pz + w[1]]); }
       for (const seg of clip(pts, ok, 40)) out.push({ pts: seg, cls: 1, w: 8.5, name: TREES[Math.floor(rnd() * TREES.length)] + ' ' + END_KINDS[Math.floor(rnd() * END_KINDS.length)] });
     }
   }
@@ -175,7 +195,7 @@ function superblockLayout(ctx) {
 }
 
 function windingLayout(ctx) {
-  const { rnd, dna, R, ok, outR } = ctx, out = [];
+  const { rnd, dna, R, ok, outR, r0 } = ctx, out = [];
   const CELL = 40, hash = new Map();
   const add = (x, z, id, hx, hz) => { const k = Math.floor(x / CELL) + ',' + Math.floor(z / CELL); let a = hash.get(k); if (!a) hash.set(k, a = []); a.push({ x, z, id, hx, hz }); };
   const nearest = (x, z, rad, skipId, skipR) => {   // true when some OTHER street sample lies within rad
@@ -192,7 +212,7 @@ function windingLayout(ctx) {
   // collectors: meander outward from the verge
   for (let k = 0; k < nCol; k++) {
     const a0 = rot + (k + rnd() * .6) / nCol * TAU;
-    let x = Math.cos(a0) * (SUB_R0 + 8), z = Math.sin(a0) * (SUB_R0 + 8), h = a0 + (rnd() - .5) * .5;
+    let x = Math.cos(a0) * (r0 + 8), z = Math.sin(a0) * (r0 + 8), h = a0 + (rnd() - .5) * .5;
     const pts = [[x, z]]; const my = id++;
     for (let st = 0; st < 170; st++) {
       const ang = Math.atan2(z, x);
@@ -241,12 +261,13 @@ export function layoutOf(meta) {
 }
 
 // the city's whole suburban street list, world coordinates (anchor added)
-export function suburbRoads(meta, ax, az) {
+export function suburbRoads(meta, ax, az, r0) {
+  r0 = r0 || SUB_R0;
   const dna = cityDNA(meta), layout = layoutOf(meta);
   const rnd = _mulberry(hashStr('sub' + layout + (meta.key || meta.name)));
-  const outR = a => outlineR(meta, a);
-  const ok = (x, z) => { const r = Math.hypot(x, z); return r >= SUB_R0 && r <= outR(Math.atan2(z, x)); };
+  const outR = a => outlineR(meta, a, r0);
+  const ok = (x, z) => { const r = Math.hypot(x, z); return r >= r0 && r <= outR(Math.atan2(z, x)); };
   const R = dna.subR1 + 40;
-  const roads = LAYOUTS[layout]({ rnd, dna, R, ok, outR });
+  const roads = LAYOUTS[layout]({ rnd, dna, R, ok, outR, r0 });
   return roads.map(r => ({ pts: r.pts.map(p => [p[0] + ax, p[1] + az]), w: r.w, cls: r.cls, sub: 1, name: r.name }));
 }

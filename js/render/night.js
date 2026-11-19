@@ -341,10 +341,12 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.73 — NEIGHBORHOODS REDRAWN', `
-    <p><b>The round suburbs are gone.</b></p>
-    <div class="kv"><span class="k">STREET PATTERNS</span><span class="v">each region lays its own: gridiron, winding cul-de-sacs, a bent small-block lattice, or superblocks with comb stubs</span></div>
-    <div class="kv"><span class="k">RAGGED EDGE</span><span class="v">every city's suburbs end on their own irregular outline, and the lawn follows it</span></div>
+  openModal('Welcome to v2.74 — OPEN GROUND', `
+    <p><b>Cities lose their square.</b></p>
+    <div class="kv"><span class="k">NO GRAY APRON</span><span class="v">the ground plate hugs the real blocks and stops at rivers and lakes; downtown corners round off</span></div>
+    <div class="kv"><span class="k">CURVED STREETS</span><span class="v">every neighborhood bends — grids, superblocks and lattices all curve, and a few connectors tie them to downtown</span></div>
+    <div class="kv"><span class="k">ONE GRASS</span><span class="v">the patchy green rectangles are gone; lawns and parks match the land</span></div>
+    <div class="kv"><span class="k">HOUSES</span><span class="v">more of them, and they stay visible from a high city view</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }

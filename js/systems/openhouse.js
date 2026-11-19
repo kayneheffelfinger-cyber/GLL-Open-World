@@ -874,7 +874,7 @@ WORLD.update = function (dt, px, pz, camDist) {
   try {
     const g = CITY.suburbGroup;
     if (g) {
-      const vis = camDist < 1000;
+      const vis = camDist < 4200;   // v2.74: houses stay visible from a high city view (was 1000 m)
       if (g.visible !== vis) g.visible = vis;
     }
   } catch (e) { }

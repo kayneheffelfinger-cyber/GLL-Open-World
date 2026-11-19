@@ -7,7 +7,6 @@
 import * as THREE from 'three';
 import { CITIES, DEG_M, ECON, WORLD_BOUNDS, WORLD_CONTS } from '../config.js';
 import { _mulberry, hashStr, worldAnchorOf, cityDNA } from '../util.js';
-import { outlineR } from '../suburbs.js';   // v2.73 ragged suburb edge
 import { STATE } from '../state.js';
 import { LANDGEO, WORLD_EDGES } from '../core.js';
 import { OSM } from '../world/osm.js';
@@ -1050,56 +1049,12 @@ export const WORLD = (() => {
     // plate, the streets and the road junctions ride this pad instead,
     // and the coarse cells under it are dropped to −10 cm (nearCityZone).
 
-    // ---- v2.42: the suburb ground decal ---------------------------------
-    // "houses and neighborhoods around the cities": a residential-green
-    // ring under the neighborhood streets — lighter, lawn-toned greens
-    // (the belt's deep woodland colors start where this ends), mottled
-    // like yards, dry land only, the same anchor-local frame and
-    // renderOrder as the belt. The city plate covers the inner part
-    // while the full city stands; beyond it this is the ground the
-    // houses stand on, and it renders at every zoom like the belt does.
-    function buildSuburbDecal(c) {
-      const pos = [], norm = [], colr = [];
-      // v2.65 CITY DNA: the lawn ring runs to the city's OWN suburb edge
-      const R0 = CITY_R + 120, R1 = subEdge(c), BANDS = 7, SECT = 44;
-      const greens = [0x7cb45e, 0x8ec96a, 0x74b056, 0x86c262];
-      for (let i = 0; i < BANDS; i++) {
-        for (let j = 0; j < SECT; j++) {
-          const a0 = (j / SECT) * 6.2832 + (i % 2) * .07, a1 = ((j + 1) / SECT) * 6.2832 + (i % 2) * .07;
-          const hv = hashStr(c.key + '/s' + i + '/' + j);
-          // v2.73: each corner's outer reach is the city's OWN ragged outline
-          const E0 = Math.min(R1, outlineR(c, a0)), E1 = Math.min(R1, outlineR(c, a1));
-          const rad = (E, k) => R0 + (E - R0) * k / BANDS;
-          const P = [[rad(E0, i), a0], [rad(E0, i + 1), a0], [rad(E1, i + 1), a1], [rad(E1, i), a1]].map(([r, a]) => [Math.cos(a) * r, Math.sin(a) * r]);
-          if (LANDGEO.isWaterWorld(c.wx + (P[0][0] + P[2][0]) / 2, c.wz + (P[0][1] + P[2][1]) / 2) ||
-              LANDGEO.isWaterWorld(c.wx + P[0][0], c.wz + P[0][1]) ||
-              LANDGEO.isWaterWorld(c.wx + P[1][0], c.wz + P[1][1]) ||
-              LANDGEO.isWaterWorld(c.wx + P[2][0], c.wz + P[2][1]) ||
-              LANDGEO.isWaterWorld(c.wx + P[3][0], c.wz + P[3][1])) continue;
-          const gc = col(greens[hv % 4]);
-          const f = .94 + (Math.floor(hv / 520) % 12) / 100;
-          for (const k of [0, 1, 2, 0, 2, 3]) {
-            pos.push(P[k][0], .0095, P[k][1]);
-            norm.push(0, 1, 0);
-            colr.push(gc[0] * f, gc[1] * f, gc[2] * f);
-          }
-        }
-      }
-      if (!pos.length) return;
-      const g = new THREE.BufferGeometry();
-      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-      g.setAttribute('normal', new THREE.Float32BufferAttribute(norm, 3));
-      g.setAttribute('color', new THREE.Float32BufferAttribute(colr, 3));
-      const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }));
-      m.renderOrder = RO_BELT;   // v2.37 flat-ground ladder — same rung as the belt
-      m.position.set(c.wx, 0, c.wz);   // city-anchor-local: exact depth
-      m.receiveShadow = true;
-      group.add(m);
-    }
+    // ---- v2.74: no suburb ground decal. The lawn-green quads (4 greens,
+    // jittered per sector) read as random patches next to the real land;
+    // the fine pad below already is the grass, so the suburbs stand on it.
     if (LANDGEO.ready) {
       for (const c of CITIES) {
         buildForestBelt(c);
-        buildSuburbDecal(c);   // v2.42: lawn-green ring under the neighborhoods
         const R = 12000, N = 16, T = 2 * R / N;
         const pos = [], norm = [], uv = [], col = [];   // v2.33: landMat is vertex-colored now — pads carry white
         for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
@@ -1713,6 +1668,7 @@ export const WORLD = (() => {
       // green bled through the off-white plate in z-fight stripes (the
       // "glitchy floor under the cities"). 170 m covers the patch rect.
       if (distToCity(px, pz).d < CITY_R + 170) continue;
+      if (pastEdge(px, pz) < 700) continue;   // v2.74: no random green tint rectangles in/around cities — one even grass
       const g = new THREE.PlaneGeometry(w, d); g.rotateX(-Math.PI / 2);
       // v2.32 GREEN RIFT: light/dark GREEN mottle — bigger patches, more
       // contrast, so the land keeps organic variation when zoomed far out

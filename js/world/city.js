@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { ECON } from '../config.js';
 import { _ihash, _mulberry, _polyArea, hashStr, cityDNA } from '../util.js';
-import { suburbRoads } from '../suburbs.js';   // v2.73
+import { suburbRoads, coreR } from '../suburbs.js';   // v2.73
 import { LANDGEO } from '../core.js';
 import { WORLD } from '../world/world.js';
 import { STATE } from '../state.js';   // v2.66 PICTURE: the DETAIL lever — LITE reads the saved gfx pack at build time
@@ -1095,7 +1095,7 @@ export const CITY = (() => {
       mesh.receiveShadow = true;
       group.add(mesh);
     };
-    flat(city.greens, 0x5fbf6f, .065);
+    flat(city.greens, 0x6aa84c, .065);   // v2.74: parks wear the land's own grass green, not a minty one
     flat(city.waters, 0x3479bd, .042);   // v2.44 PATCHWORK: above the farm quilt (.028) so pasture ponds keep their water
 
     // walking-path rings through the parks + benches facing the center
@@ -1202,7 +1202,7 @@ export const CITY = (() => {
         const c = [L.corners[0][0], .07, L.corners[0][2]], c1 = [L.corners[1][0], .07, L.corners[1][2]],
               c2 = [L.corners[2][0], .07, L.corners[2][2]], c3 = [L.corners[3][0], .07, L.corners[3][2]];
         pushQuad(lawns, c, c1, c2, c3, UP, [0, 0], [1, 0], [1, 1], [0, 1],
-          jit(colOf(0x6cc066), .92 + lrnd() * .16));
+          colOf(0x6aa84c));   // v2.74: lawns = the same even grass (no per-lawn shade jitter)
         nLawn++;
         if (L.area >= 130 && lrnd() < .8) {                           // lawn trees
           const s1 = lrnd() < .5 ? 1 : -1, s2 = lrnd() < .5 ? 1 : -1;
@@ -2026,7 +2026,8 @@ export const CITY = (() => {
   // inspector opens it too (houses list their ROOMS). The chunk pass's
   // wild content (belt trees, groves, paddocks, rocks, ponds) moves out
   // past the ring, so nothing wild grows in the yards.
-  const SUB_R0 = 865, SUB_R1 = 2360;   // the ring (CITY_R 745 + verge → +1615) — v2.65: the base every city's DNA scales
+  let SUB_R0 = 865;                    // v2.74: set per build — 585 hugging real OSM data (±360 m), 865 for generated cities
+  const SUB_R1 = 2360;   // the ring (CITY_R 745 + verge → +1615) — v2.65: the base every city's DNA scales
   let suburbRec = null;
   let suburbGroup = null;              // v2.42: distance-LOD host (houses/trees/cars)
   const SUB_TREES = ['Maple', 'Oak', 'Cedar', 'Elm', 'Pine', 'Birch', 'Willow', 'Aspen', 'Rowan', 'Poplar', 'Hawthorn', 'Juniper'];
@@ -2036,7 +2037,7 @@ export const CITY = (() => {
   // are gone — js/suburbs.js lays a street pattern per region (grid,
   // winding, lattice, superblock) inside a ragged per-city outline.
   function addSuburbRoads(meta, ax, az) {
-    return suburbRoads(meta, ax, az);
+    return suburbRoads(meta, ax, az, SUB_R0 + 15);
   }
 
   // ---------- v2.63 ONE NETWORK: every road reaches every other -------
@@ -2313,7 +2314,7 @@ export const CITY = (() => {
     // v2.65 CITY DNA: the house cap rides the ring's AREA (sub²) — a metro
     // that sprawls 40% wider grows ~2× the houses, a town that tightens
     // sheds them (capped at 1600 so the merged buffers stay bounded)
-    const MAXH = Math.min(1600, Math.round((isMob ? 420 : (city.tier === 3 ? 950 : city.tier === 1 ? 640 : 820)) * dna.sub * dna.sub));
+    const MAXH = Math.min(2300, Math.round((isMob ? 520 : (city.tier === 3 ? 1700 : city.tier === 1 ? 1150 : 1480)) * dna.sub * dna.sub));   // v2.74: ~1.8x — houses reach further out along the new streets
     // v2.65: warm↔cool house palette + the city's rotated slice of it
     const warmP = Math.max(.12, Math.min(.95, .62 + dna.warm));
     const sreg = dna.region;   // v2.69 REGIONAL CHARACTER: the houses wear the region's palettes too
@@ -2419,6 +2420,11 @@ export const CITY = (() => {
       return false;
     };
     // inner streets first, so the house cap fills town-outward
+    // v2.74: spread the house budget over the whole neighborhood — with the
+    // cap spent only on the innermost streets the outer ones stood empty
+    let candLots = 0;
+    for (const rd of subRoads) for (let i = 1; i < rd.pts.length; i++) candLots += Math.hypot(rd.pts[i][0] - rd.pts[i - 1][0], rd.pts[i][1] - rd.pts[i - 1][1]) * 2 / (24 * dna.villa);
+    const spread = Math.max(.45, Math.min(1, MAXH / Math.max(1, candLots * .62)));
     const ordered = subRoads.slice().sort((a, b) => {
       const dOf = rd => { let m = 1e9; for (const p of rd.pts) m = Math.min(m, Math.hypot(p[0] - axc, p[1] - azc)); return m; };
       return dOf(a) - dOf(b);
@@ -2442,7 +2448,7 @@ export const CITY = (() => {
             if (placed >= MAXH) break;
             const rr = Math.hypot(A[0] + ux * d - axc, A[1] + uz * d - azc);
             const fill = rr < fill1 ? .92 : rr < fill2 ? .7 : .52;
-            if (rnd() > fill) continue;
+            if (rnd() > fill * spread) continue;
             const depth = Math.min(40, (26 + rnd() * 8) * dna.villa);
             const off0 = rd.w / 2 + 1.75 + 1.2;    // past the sidewalk
             const lotHW = LOTW / 2 - .7, lotHD = depth / 2;
@@ -2907,7 +2913,7 @@ export const CITY = (() => {
   // ends where the water begins — the shore shapes the city, like in the
   // real world. (The planet's land shield still shows between the last
   // tile and the waterline, so nothing floats.)
-  function shorePlate(ax, az, size, y, tex) {
+  function shorePlate(ax, az, size, y, tex, keep, N) {
     if (!LANDGEO.ready) {
       const base = new THREE.Mesh(new THREE.PlaneGeometry(size, size),
         new THREE.MeshLambertMaterial({ map: tex }));
@@ -2916,7 +2922,8 @@ export const CITY = (() => {
       base.receiveShadow = true;
       return base;
     }
-    const N = 20, T = size / N;
+    N = N || 20;
+    const T = size / N;
     const pos = [], uv = [];
     for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
       const x0 = ax - size / 2 + i * T, z0 = az - size / 2 + j * T;
@@ -2925,6 +2932,7 @@ export const CITY = (() => {
       if (LANDGEO.isWaterWorld(x0, z0) || LANDGEO.isWaterWorld(x1, z0) ||
           LANDGEO.isWaterWorld(x0, z1) || LANDGEO.isWaterWorld(x1, z1) ||
           LANDGEO.isWaterWorld((x0 + x1) / 2, (z0 + z1) / 2)) continue;
+      if (keep && !keep((x0 + x1) / 2, (z0 + z1) / 2)) continue;   // v2.74: organic footprint
       const u0 = i / N, u1 = (i + 1) / N, v0 = j / N, v1 = (j + 1) / N;
       // v2.27: emitted ANCHOR-LOCAL; the mesh carries the anchor
       const lx0 = x0 - ax, lz0 = z0 - az, lx1 = x1 - ax, lz1 = z1 - az;
@@ -2962,9 +2970,35 @@ export const CITY = (() => {
     cityAnchor = { x: ax, z: az };
     AX = ax; AZ = az;   // v2.27: every emitted vertex is city-local from here on
     cityRec = { ...cityData, ...cityMeta };
+    SUB_R0 = cityData.source === 'osm' ? 585 : 865;   // v2.74: real OSM data spans ±360 m (≤510 m corner), so the neighborhoods start right at its edge
     group = new THREE.Group();
     const shift = pts => pts.map(p => [p[0] + ax, p[1] + az]);
     roads = cityData.roads.map(r => ({ ...r, pts: shift(r.pts) }));
+    // v2.74 ORGANIC DOWNTOWN EDGE: real OSM data arrives as a ±360 m square,
+    // which made every city end in four straight sides. Streets, buildings
+    // and parks past a ragged 340-430 m outline are trimmed so the corners
+    // round off; the ONE NETWORK pass below ties the suburbs back in with
+    // curved connectors.
+    const coreMeta = cityMeta;
+    const inCore = (x, z) => { const dx = x - ax, dz = z - az; return Math.hypot(dx, dz) <= coreR(coreMeta, Math.atan2(dz, dx)) * coreK; };
+    const coreK = cityData.source === 'osm' ? 1 : 1.5;   // generated fallback cities span ±662 m
+    const trimCore = !cityData.pasture;
+    if (trimCore) {
+      const cut = [];
+      for (const r of roads) {
+        const pts = r.pts, dense = [pts[0]];
+        for (let i = 1; i < pts.length; i++) {
+          const a = pts[i - 1], b = pts[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.min(400, Math.floor(L / 14));
+          for (let k = 1; k <= n; k++) dense.push([a[0] + (b[0] - a[0]) * k / (n + 1), a[1] + (b[1] - a[1]) * k / (n + 1)]);
+          dense.push(b);
+        }
+        let curp = [];
+        const flush = () => { if (curp.length >= 3 && Math.hypot(curp[curp.length - 1][0] - curp[0][0], curp[curp.length - 1][1] - curp[0][1]) >= 24) cut.push({ ...r, pts: curp }); curp = []; };
+        for (const p of dense) { if (inCore(p[0], p[1])) curp.push(p); else flush(); }
+        flush();
+      }
+      if (cut.length >= 8) roads = cut;   // never trim a sparse import to nothing
+    }
     // v2.42 NEIGHBORHOODS: the suburb ring streets join the street list
     // BEFORE the dry-land clip below, so a shoreline trims them exactly
     // like any imported street (a ring crossing a bay comes back as dry
@@ -2972,8 +3006,9 @@ export const CITY = (() => {
     if (!cityData.pasture) {
       try { roads.push(...addSuburbRoads(cityMeta, ax, az)); } catch (e) { console.error('[suburbroads]', e); }
     }
-    buildingPolys = (cityData.buildings || []).map(b => ({ ...b, poly: shift(b.poly) }));
-    let greensShift = (cityData.greens || []).map(g => ({ ...g, poly: shift(g.poly) }));
+    const polyIn = p => { let cx = 0, cz = 0; for (const q of p) { cx += q[0]; cz += q[1]; } return inCore(cx / p.length, cz / p.length); };
+    buildingPolys = (cityData.buildings || []).map(b => ({ ...b, poly: shift(b.poly) })).filter(b => !trimCore || polyIn(b.poly));
+    let greensShift = (cityData.greens || []).map(g => ({ ...g, poly: shift(g.poly) })).filter(g => !trimCore || polyIn(g.poly));
     const watersShift = (cityData.waters || []).map(g => ({ ...g, poly: shift(g.poly) }));
     // ---- v2.20 DRY LAND: the city forms AROUND its water ---------------
     // Streets stop BEFORE the waterline: each crossing is found by
@@ -3108,7 +3143,39 @@ export const CITY = (() => {
       return group;
     }
 
-    group.add(shorePlate(ax, az, 1490, .012, getGroundTex()));
+    // v2.74 NO MORE BIG GRAY SQUARE: the ground plate used to be the whole
+    // 1490 m square although the imported streets and buildings span only
+    // ~720 m, so a wide gray apron ringed every city. Now only ground that
+    // is near real city content is laid: a tile stays if a building or a
+    // street lies within ~95 m, and never over an OSM river/lake polygon —
+    // so the footprint follows the blocks, the curves of the streets and
+    // the water instead of a square.
+    {
+      const MC = 60, mk = new Map(), add = (x, z) => { const k = Math.floor(x / MC) + ',' + Math.floor(z / MC); let a = mk.get(k); if (!a) mk.set(k, a = []); a.push(x, z); };
+      for (const b of buildingPolys) {
+        const P = b.poly; if (!P || !P.length) continue;
+        let cx = 0, cz = 0; for (const q of P) { cx += q[0]; cz += q[1]; add(q[0], q[1]); }
+        add(cx / P.length, cz / P.length);
+      }
+      for (const r of roads) {
+        if (r.sub || r.link) continue;
+        for (let i = 0; i < r.pts.length; i++) {
+          add(r.pts[i][0], r.pts[i][1]);
+          if (i) { const a = r.pts[i - 1], b = r.pts[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.min(40, Math.floor(L / 25)); for (let k = 1; k <= n; k++) add(a[0] + (b[0] - a[0]) * k / (n + 1), a[1] + (b[1] - a[1]) * k / (n + 1)); }
+        }
+      }
+      const REACH = 95, waterPolys = watersShift.filter(w => w.poly && w.poly.length > 2);
+      const keep = (x, z) => {
+        for (const w of waterPolys) if (inPoly(x, z, w.poly)) return false;
+        const cx = Math.floor(x / MC), cz = Math.floor(z / MC);
+        for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) {
+          const a = mk.get((cx + i) + ',' + (cz + j)); if (!a) continue;
+          for (let k = 0; k < a.length; k += 2) if (Math.hypot(a[k] - x, a[k + 1] - z) <= REACH) return true;
+        }
+        return false;
+      };
+      group.add(shorePlate(ax, az, 1490, .012, getGroundTex(), keep, 60));
+    }
     onStatus && onStatus('Laying out the street grid…'); await _tick();
     buildRoads(shifted);
     onStatus && onStatus('Raising ' + (cityData.buildings || []).length + ' buildings…'); await _tick();
