@@ -96,7 +96,9 @@ export const RIVALS = (() => {
       + (window.BLD ? BLD.valueOf() : 0)
       + (window.FACT ? FACT.valueOf() : 0)
       + (window.FURN ? FURN.valueOfRooms() : 0)
-      + (window.OIL ? OIL.valueOf() : 0);   // v2.52 ORE EXCHANGE · v2.56 GROUND UP · v2.57 FURNITURE · v2.61 FACTORY FLOOR · v2.62 DEEP WATER (platforms + tanked crude at par)
+      + (window.OIL ? OIL.valueOf() : 0)
+      + (window.BANK ? BANK.net() : 0);   // v2.80 BANKS: account balances less credit-card balances owed (loans will subtract here too)
+  // v2.52 ORE EXCHANGE · v2.56 GROUND UP · v2.57 FURNITURE · v2.61 FACTORY FLOOR · v2.62 DEEP WATER (platforms + tanked crude at par)
   }
 
   // the board: sixteen rows, richest first, you among them

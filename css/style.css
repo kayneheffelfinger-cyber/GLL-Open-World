@@ -682,3 +682,8 @@ table.menu td.m{font-family:var(--mono);color:var(--green)}
 .st-book .g.st-lvl{background:linear-gradient(to left,rgba(72,187,120,.18) var(--d),transparent var(--d))}
 .st-book .r.st-lvl{background:linear-gradient(to left,rgba(252,129,129,.16) var(--d),transparent var(--d))}
 .st-row{border-radius:8px;padding-left:8px;padding-right:8px;transition:background .15s}.st-row:hover{background:rgba(255,255,255,.04)}
+
+/* ================= BANKS (v2.80) ================= */
+#bk-body{display:flex;flex-direction:column;gap:10px}
+.bk-bal{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--green2)}
+.bk-stmt b:last-child{font-family:var(--mono);white-space:nowrap}

@@ -44,6 +44,7 @@ import { PWR } from './systems/power.js';
 import { GEN } from './systems/generators.js';   // v2.75 OWN POWER: generators (burners, hydro, wind, solar) + blackouts — after power.js; wraps PWR.isCut/open/bizRow/nightSettle and the click/hover/empire/update chains, so nothing earlier here needs to change
 import { CO } from './systems/companies.js';   // v2.77 COMPANIES: real-player companies — inert unless the hosted /api answers api/companies/status; loads after rivals (net worth) and sync (the hosted check)
 import { STK } from './systems/companystocks.js';   // v2.77 COMPANIES: company stocks — a tab in the company window + the STOCKS window, same gate
+import { BANK } from './systems/banks.js';   // v2.80 BANKS: city banks, cards, ledger, statements — after companies (the company bank transfers) and rivals; wraps spend() via economy.js and the update/empire chains
 import { GFX } from './systems/graphics.js';   // v2.66 PICTURE: the graphics settings behind the Help tab's GRAPHICS button
 import { TRAFFIC } from './systems/traffic.js';   // v2.68 RUSH HOUR: ambient cars on the real road net — wraps ACTORS.spawnCitizens/reset/updateCitizens, so nothing earlier here needs to change
 import './systems/landmarks.js';   // v2.69 REGIONAL CHARACTER: real landmarks at their true spots — wraps CITY.build (drops the plain OSM block under each, adds the landmark meshes), so nothing earlier here needs to change

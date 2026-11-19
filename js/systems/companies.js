@@ -9,7 +9,7 @@
 // ====================================================================
 import { STATE } from '../state.js';
 import { saveGame } from '../save.js';
-import { earn, spend } from '../systems/economy.js';
+import { earn, spendCash as spend } from '../systems/economy.js';   // company/wallet money always leaves CASH, never a bank card
 import { closeModal, openModal, toast } from '../ui/dom.js';
 import { fmt$ } from '../util.js';
 import { ECO } from '../systems/eco.js';
@@ -29,6 +29,7 @@ export const CO = (() => {
   let pollT = 0, fails = 0, stopped = false, incomeT = 0, flushing = false;
   const sections = [];                   // other modules (company stocks) add company-panel tabs here
   const listeners = [];
+  const payoutListeners = [];
 
   const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const r2 = v => Math.round((+v || 0) * 100) / 100;
@@ -127,6 +128,7 @@ export const CO = (() => {
           c.claimed.push(p.id); if (c.claimed.length > 200) c.claimed.shift();
           saveGame();
           toast('💼 <b>' + fmt$(p.amount) + '</b> paid into your cash' + (p.memo ? ' — ' + esc(p.memo) : '') + '.');
+          for (const f of payoutListeners) { try { f(p); } catch (e) { console.error('[companies]', e); } }   // v2.80: the bank module routes a company-bank transfer on into the chosen account
         }
         const a = await call('POST', 'wallet/payouts/' + encodeURIComponent(p.id) + '/ack', {});
         if (a.ok && S.wallet) S.wallet.payouts = (S.wallet.payouts || []).filter(x => x.id !== p.id);
@@ -228,6 +230,20 @@ export const CO = (() => {
     const r = await call('POST', 'wallet/withdrawals', { amount: r2(amount), requestId: uid() });
     if (!r.ok) { say(r); return r; }
     await refresh(true); return r;                           // the payout arrives with the refresh and is credited once
+  }
+  // v2.80 BANKS: move money between your own cash and the company bank (cash -> wallet -> bank, and back)
+  async function depositToCompanyBank(amount) {
+    if (!S.enabled || !S.company) return { ok: false, code: 'no_company' };
+    amount = r2(amount);
+    const w = await walletDeposit(amount); if (!w.ok) return w;
+    const r = await call('POST', S.company.id + '/bank/deposits', { amount, requestId: uid() });
+    if (!r.ok) { say(r); toast('The money is safe in your exchange wallet — move it again from the COMPANY window.', 'warn'); return r; }
+    await refresh(true); return r;
+  }
+  async function companyBankToCash(amount, memo) {
+    if (!S.enabled || !S.company) return { ok: false, code: 'no_company' };
+    const r = await bankWithdraw(amount, memo || 'transfer to a bank account'); if (!r.ok) return r;
+    return walletWithdraw(amount);
   }
   async function loadLedger(before) {
     const r = await call('GET', S.company.id + '/bank/ledger?limit=25' + (before ? '&before=' + encodeURIComponent(before) : ''));
@@ -383,7 +399,8 @@ export const CO = (() => {
   }
 
   return {
-    init, open, call, divert, refresh, sendIncome, empireInto, onChange,
+    init, open, call, divert, refresh, sendIncome, empireInto, onChange, depositToCompanyBank, companyBankToCash,
+    onPayout(fn) { payoutListeners.push(fn); },
     esc, r2, can, isOwner, playerWorth, render,
     addSection(s) { sections.push(s); },
     get state() { return S; },

@@ -260,6 +260,11 @@ export function startMock({ port = 0, mode = 'full' } = {}) {
         }
         const out = { accepted, rejected, balance: Math.round(c.bank * 100) / 100 }; c.batches.set(body.batchId, out); bump(); return ok(out);
       }
+      if (method === 'POST' && rest[1] === 'deposits') {
+        const amt = Math.round(+body.amount * 100) / 100; if (!(amt > 0)) return err(400, 'bad_request', 'Amount must be positive.');
+        if (p.wallet < amt) return err(422, 'insufficient_wallet', 'Your wallet holds less than that.');
+        p.wallet -= amt; ledger(c, 'member_deposit', amt, p, body.memo); bump(); return ok({ balance: Math.round(c.bank * 100) / 100, wallet: meView(p).wallet }, 201);
+      }
       if (method === 'POST' && rest[1] === 'withdrawals') {
         if (!has(c, p, 'withdraw')) return err(403, 'forbidden', 'You may not withdraw.');
         const amt = Math.round(+body.amount * 100) / 100; if (!(amt > 0)) return err(400, 'bad_request', 'Amount must be positive.');

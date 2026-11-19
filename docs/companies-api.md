@@ -115,13 +115,14 @@ From the moment a business is assigned the client stops crediting its sales to c
 ## 6. The bank and ledger
 
 - `GET api/companies/{cid}/bank` → `{ "bank": { "balance": 4410.25 } }`
-- `GET api/companies/{cid}/bank/ledger?limit=25&before=<cursor>` (needs `view_ledger`) → `{ "entries": [ { "id","ts","type","amount","balanceAfter","memberId","memberName","memo" } ], "next": "<cursor>"|null }`, newest first. `amount` is signed. Types include `founding_fee`, `business_income`, `withdrawal`, `dividend`, `share_sale`, `adjustment`. The ledger is append-only.
+- `GET api/companies/{cid}/bank/ledger?limit=25&before=<cursor>` (needs `view_ledger`) → `{ "entries": [ { "id","ts","type","amount","balanceAfter","memberId","memberName","memo" } ], "next": "<cursor>"|null }`, newest first. `amount` is signed. Types include `founding_fee`, `business_income`, `member_deposit`, `withdrawal`, `dividend`, `share_sale`, `adjustment`. The ledger is append-only.
 - **Income deposit** `POST api/companies/{cid}/bank/income`
 ```json
 { "batchId": "rk3x...", "reports": [ { "bizId": "plot-17", "seq": 12, "amount": 41.5, "periodMs": 20000 } ] }
 ```
   → `200 { "accepted": [ { "bizId","seq","amount" } ], "rejected": [ { "bizId","seq","amount","reason": "not_assigned|over_cap|bad_amount" } ], "balance": 4451.75 }`.
   The client holds each assigned business's sales and sends one batch about every 20 s; `seq` is a per-business counter that only increases; the batch is saved locally and **re-sent verbatim** until answered (the same `batchId` returns the stored answer). Rejected amounts are credited back to the player's cash by the client, so a rejection costs the player nothing and a cheater gains nothing beyond the cap.
+- **Member deposit** `POST api/companies/{cid}/bank/deposits` `{ "amount": 250, "memo": "optional", "requestId": "..." }` → `201 { "balance", "wallet": <Wallet> }`. Any member moves money from their **exchange wallet** into the company bank (ledger type `member_deposit`). Errors: `insufficient_wallet`, `bad_request`, `not_a_member`. (Added after protocol 1 shipped; additive, so `protocol` stays 1. The single-player Bank panel uses it for transfers between a player's own bank accounts and the company bank.)
 - **Withdrawal** `POST api/companies/{cid}/bank/withdrawals` `{ "amount": 8, "memo": "lunch", "requestId": "..." }` → `200 { "withdrawal": { "id","amount" }, "balance", "wallet": <Wallet> }`. Needs `withdraw`; money goes to the caller's **exchange wallet**, and the role's 24 h limit applies. Errors: `forbidden`, `over_limit`, `insufficient_bank`, `bad_request`.
 
 ## 7. Stock market

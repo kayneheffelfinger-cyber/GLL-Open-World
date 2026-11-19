@@ -25,6 +25,7 @@ export const STATE = {
   pow: { g: { m: 1, pm: 1 }, b: {} },   // v2.59 THE GRID: the power state — grid price multiplier {m, pm} + per-business meters {plotId: {m, cut, due}}
   gen: { sell: 1, t: 12, sold: 0, units: [], out: null },   // v2.75 OWN POWER: your generators {sell switch, game clock hours, $ sold to the grid, units [{id,t,x,z,on,sea,price,spot,burnt,dry}]}
   co: { pend: {}, seq: {}, claimed: [] },   // v2.77 COMPANIES (inert until the server supports them): company income held for the next bank report, report sequence numbers, wallet payouts already credited, an unanswered income batch
+  bank: { accts: {}, debit: {}, cc: {}, ledger: [], stmts: [], inbound: [], day: 0, seq: 0, method: 'cash' },   // v2.80 BANKS: one account per city bank {id, cityKey, name, bal, opened, m}, debit cards, credit cards {limit, owed, stmt...}, the append-only ledger, monthly statements, the game-day count, the PAY WITH method
   gfx: { shadows: true, trees: true, scale: 1, lite: false, tone: 'moody' },   // v2.66 PICTURE: the graphics levers behind the Help tab's GRAPHICS button — saved with the world
   designs: [],                   // v2.67 THE ARCHITECT: your drafted buildings {name, w, d, h, floors, style, mat, days, inc, val} — placed buildings save t = 100 + index
   market: null,                  // MARKET module state (positions/orders)

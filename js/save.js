@@ -162,6 +162,33 @@ export function loadGame() {
       }
       STATE.co = co;
     }
+    // v2.80 BANKS: accounts, cards, ledger, statements (absent on older saves — no accounts, cash method)
+    {
+      const __b = (p.bank && typeof p.bank === 'object') ? p.bank : {}, __m = (v, lo, hi) => Math.min(hi, Math.max(lo, isFinite(+v) ? +v : 0)), __r = v => Math.round(v * 100) / 100;
+      const out = { accts: {}, debit: {}, cc: {}, ledger: [], stmts: [], inbound: [], day: Math.floor(__m(__b.day, 0, 1e6)), seq: Math.floor(__m(__b.seq, 0, 1e9)), method: 'cash' };
+      const known = new Set(CITIES.map(c => c.key));
+      for (const k of Object.keys(__b.accts || {}).slice(0, 80)) {
+        const a = __b.accts[k]; if (!a || typeof a !== 'object' || k !== 'a_' + a.cityKey || !known.has(a.cityKey)) continue;
+        const m = a.m || {};
+        out.accts[k] = { id: k, cityKey: a.cityKey, name: String(a.name || '').slice(0, 60), bal: __r(__m(a.bal, 0, 1e12)), opened: Math.floor(__m(a.opened, 0, 1e6)), m: { open: __r(__m(m.open, 0, 1e12)), in: __r(__m(m.in, 0, 1e12)), out: __r(__m(m.out, 0, 1e12)), int: __r(__m(m.int, 0, 1e12)), fee: __r(__m(m.fee, 0, 1e12)) } };
+        if (__b.debit && __b.debit[k]) out.debit[k] = 1;
+        const c = __b.cc && __b.cc[k];
+        if (c && typeof c === 'object') {
+          const s = c.stmt && typeof c.stmt === 'object' ? c.stmt : null;
+          out.cc[k] = { limit: __r(__m(c.limit, 500, 25000)), owed: __r(__m(c.owed, 0, 1e9)), purch: __r(__m(c.purch, 0, 1e9)), pay: __r(__m(c.pay, 0, 1e9)), stmtOpen: __r(__m(c.stmtOpen, 0, 1e9)), since: Math.floor(__m(c.since, 0, 1e6)),
+            stmt: s ? { closing: __r(__m(s.closing, 0, 1e9)), minDue: __r(__m(s.minDue, 0, 1e9)), dueDay: Math.floor(__m(s.dueDay, 0, 1e6)), closeDay: Math.floor(__m(s.closeDay, 0, 1e6)), paidSince: __r(__m(s.paidSince, 0, 1e9)), paidAtDue: s.paidAtDue == null ? undefined : __r(__m(s.paidAtDue, 0, 1e9)), late: s.late ? 1 : 0, settled: s.settled ? 1 : 0 } : null };
+        }
+      }
+      const okLine = l => typeof l === 'string' && (out.accts[l] || (l.slice(0, 3) === 'cc_' && out.cc[l.slice(3)]));
+      out.ledger = (Array.isArray(__b.ledger) ? __b.ledger : []).slice(-300).filter(e => e && okLine(e.line) && typeof e.type === 'string' && isFinite(+e.amt))
+        .map(e => ({ id: Math.floor(__m(e.id, 0, 1e9)), day: Math.floor(__m(e.day, 0, 1e6)), ts: __m(e.ts, 0, 4e12), line: e.line, type: e.type.slice(0, 20), amt: __r(+e.amt), bal: __r(+e.bal || 0), memo: String(e.memo || '').slice(0, 80) }));
+      out.stmts = (Array.isArray(__b.stmts) ? __b.stmts : []).slice(-48).filter(s => s && (s.kind === 'account' || s.kind === 'card') && typeof s.line === 'string')
+        .map(s => { const o = { id: String(s.id || '').slice(0, 16), month: Math.floor(__m(s.month, 0, 1e5)), day: Math.floor(__m(s.day, 0, 1e6)), kind: s.kind, line: s.line.slice(0, 40), name: String(s.name || '').slice(0, 70) }; for (const f of ['open', 'close', 'in', 'out', 'int', 'fee', 'purchases', 'payments', 'minDue', 'limit']) if (s[f] != null) o[f] = __r(__m(s[f], 0, 1e12)); if (s.dueDay != null) o.dueDay = Math.floor(__m(s.dueDay, 0, 1e6)); return o; });
+      out.inbound = (Array.isArray(__b.inbound) ? __b.inbound : []).slice(0, 10).filter(x => x && out.accts[x.to] && +x.amt > 0).map(x => ({ to: x.to, amt: __r(+x.amt), ts: __m(x.ts, 0, 4e12) }));
+      const mm = typeof __b.method === 'string' ? __b.method : 'cash', mi = mm.indexOf(':');
+      if (mi > 0) { const kind = mm.slice(0, mi), id = mm.slice(mi + 1); if ((kind === 'debit' && out.debit[id]) || (kind === 'credit' && out.cc[id])) out.method = mm; }
+      STATE.bank = out;
+    }
     // v2.62 DEEP WATER: the offshore oil rigs (absent on older saves — none built)
     STATE.rigs = (p.rigs || []).filter(r => r && typeof r.id === 'string' && r.id.charAt(0) === 'r' && isFinite(+r.x) && isFinite(+r.z) && +r.ore > 0)
       .slice(0, 8)
@@ -227,6 +254,7 @@ export function saveGame() {
       rigs: (STATE.rigs || []).map(r => ({ id: r.id, name: r.name, x: +r.x || 0, z: +r.z || 0, price: +r.price || 0, ore: Math.round(+r.ore || 0), got: +(+r.got || 0).toFixed(1), crew: r.crew | 0, walked: !!r.walked, wageAcc: +(+r.wageAcc || 0).toFixed(2), sto: +(+r.sto || 0).toFixed(1), near: r.near || null, nearKey: r.nearKey || null })),   // v2.62 DEEP WATER (optional field — older builds ignore it)
       gen: (() => { const g = STATE.gen || {}; return { sell: g.sell === 0 ? 0 : 1, t: +(+g.t || 0).toFixed(2), sold: +(+g.sold || 0).toFixed(2), black: (g.black | 0), units: (g.units || []).slice(0, 24).map(u => ({ id: u.id, t: u.t, x: Math.round(+u.x || 0), z: Math.round(+u.z || 0), on: u.on ? 1 : 0, sea: u.sea ? 1 : 0, price: Math.round(+u.price || 0), burnt: +(+u.burnt || 0).toFixed(1) })) }; })(),   // v2.75 OWN POWER (optional field — older builds ignore it)
       co: (() => { const c = STATE.co || {}; const o = { pend: {}, seq: c.seq || {}, claimed: (c.claimed || []).slice(-200) }; for (const k in (c.pend || {})) if (+c.pend[k] > 0) o.pend[k] = +(+c.pend[k]).toFixed(2); if (c.inflight) o.inflight = c.inflight; return o; })(),   // v2.77 COMPANIES (optional field — older builds ignore it)
+      bank: (() => { const b = STATE.bank || {}; return { day: b.day | 0, seq: b.seq | 0, method: b.method || 'cash', accts: b.accts || {}, debit: b.debit || {}, cc: b.cc || {}, ledger: (b.ledger || []).slice(-300), stmts: (b.stmts || []).slice(-48), inbound: (b.inbound || []).slice(0, 10) }; })(),   // v2.80 BANKS (optional field — older builds ignore it)
       gfx: STATE.gfx ? { sh: STATE.gfx.shadows === false ? 0 : 1, tr: STATE.gfx.trees === false ? 0 : 1, sc: STATE.gfx.scale === .75 || STATE.gfx.scale === .5 ? STATE.gfx.scale : 1, lt: STATE.gfx.lite ? 1 : 0, tn: STATE.gfx.tone === 'classic' ? 0 : 1 } : null,   // v2.66 PICTURE (optional field — older builds ignore it)
       dsg: (STATE.designs || []).slice(0, 12).map(d => ({ n: d.name, w: +d.w || 10, d: +d.d || 8, f: d.floors | 0, s: d.style || 'brick' })),   // v2.67 THE ARCHITECT (optional field — older builds ignore it; cost/days/income re-derive on load, so a balance tweak in a later build re-prices old designs honestly)
       market: STATE.market ? STATE.market.pack() : null,
