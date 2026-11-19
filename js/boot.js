@@ -43,6 +43,7 @@ import { FURN } from './systems/furniture.js';
 import { PWR } from './systems/power.js';
 import { GFX } from './systems/graphics.js';   // v2.66 PICTURE: the graphics settings behind the Help tab's GRAPHICS button
 import { TRAFFIC } from './systems/traffic.js';   // v2.68 RUSH HOUR: ambient cars on the real road net — wraps ACTORS.spawnCitizens/reset/updateCitizens, so nothing earlier here needs to change
+import './systems/landmarks.js';   // v2.69 REGIONAL CHARACTER: real landmarks at their true spots — wraps CITY.build (drops the plain OSM block under each, adds the landmark meshes), so nothing earlier here needs to change
 
 // ---- late binding -------------------------------------------------------
 // The original single script resolved these forward references through
@@ -61,4 +62,4 @@ exchLate({ WORKS });
 
 try { GFX.apply(); } catch (e) { console.error('[gfx]', e); }   // v2.66 PICTURE: the saved picture applies once the save has loaded (loadGame runs inside render/main.js's module body, before this line)
 try { NIGHT.settle(); } catch (e) { console.error('[night]', e); }   // v2.55 NIGHT SHIFT: settle the offline gap — invoked here, at the END of the module, so ECO/MINE/WORKS are all up (the boot screen blocks until the ready log, so no click can beat it)
-console.log('%cOPEN WORLD v2.68 — RUSH HOUR', 'color:#38BDF8;font-weight:700', 'ready.');
+console.log('%cOPEN WORLD v2.69 — REGIONAL CHARACTER', 'color:#38BDF8;font-weight:700', 'ready.');

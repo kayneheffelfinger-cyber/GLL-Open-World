@@ -850,7 +850,10 @@ export const CITY = (() => {
       // the city's ROTATED slice — downtowns stop wearing the same colors
       const srnd = _mulberry(hashStr('s' + b.bkey));
       const warmP = Math.min(.96, Math.max(.06, 1.15 - h / 44 + dna.warm));
-      const PAL = srnd() < warmP ? PAL_WARM : PAL_COOL;
+      // v2.69 REGIONAL CHARACTER: the city's REGION swaps in its own wall,
+      // shingle and flat-deck palettes (js/regions.js); null = the stock set
+      const reg = dna.region;
+      const PAL = srnd() < warmP ? (reg ? reg.warm : PAL_WARM) : (reg ? reg.cool : PAL_COOL);
       // v2.67 THE ARCHITECT (picture pass): the walls settle to a muted
       // FLAT mid-tone — the low-poly reference look reads calm and clean,
       // with the grass, water and gold frames carrying the saturation
@@ -865,15 +868,19 @@ export const CITY = (() => {
       else style = sr < .55 ? 0 : 2;                   // low-rise: classic or punched
       const uOff = Math.floor(srnd() * 16);             // shift lit-window pattern
       const vOff = Math.floor(srnd() * 4);
-      const deckPool = h >= 12 ? ROOF_DECKS.slice(0, 3) : ROOF_DECKS;   // v2.67: mid-rise+ flat roofs lean GRAY (the reference skyline); low-rise keeps the gravel/tan mix
+      const deckPool = reg && reg.decks ? reg.decks : h >= 12 ? ROOF_DECKS.slice(0, 3) : ROOF_DECKS;   // v2.67: mid-rise+ flat roofs lean GRAY (the reference skyline); low-rise keeps the gravel/tan mix
       const deckC = jit(colOf(deckPool[(Math.floor(srnd() * deckPool.length) + dna.palOff) % deckPool.length]), .8 + srnd() * .14);
       const rimC = jit(colOf(TRIMS[(Math.floor(srnd() * TRIMS.length) + dna.palOff) % TRIMS.length]), .9 + srnd() * .2);
       const trimC = jit(rimC, 1.1);
-      const shinC = jit(colOf(SHINGLES[(Math.floor(srnd() * SHINGLES.length) + dna.palOff) % SHINGLES.length]), .9 + srnd() * .2);
+      const SHN = reg && reg.shingles ? reg.shingles : SHINGLES;
+      const shinC = jit(colOf(SHN[(Math.floor(srnd() * SHN.length) + dna.palOff) % SHN.length]), .9 + srnd() * .2);
       // ---- silhouette roll ----
       let obb = null;
       if (h <= 16.5 && area >= 60 && p.length <= 8) obb = obbOf(p);
-      const isPitched = !!(obb && obb.area && area / obb.area >= .78 && Math.min(obb.Lu, obb.Lv) >= 3.6);
+      // v2.69: its own deterministic roll (never touches srnd's sequence) — a
+      // flat-roof region turns that share of would-be gables into flat decks
+      const flatRoof = !!(reg && reg.flat && _mulberry(hashStr('f' + b.bkey))() < reg.flat);
+      const isPitched = !flatRoof && !!(obb && obb.area && area / obb.area >= .78 && Math.min(obb.Lu, obb.Lv) >= 3.6);
       const tiered = h >= 40 && area >= 900 && srnd() < .55;
       if (tintsUsed.length < 60) tintsUsed.push(hexOf(tint) + (isPitched ? ' p' : tiered ? ' t' : ''));
       if (roofsUsed.length < 60) roofsUsed.push(hexOf(isPitched ? shinC : deckC));
@@ -2253,6 +2260,7 @@ export const CITY = (() => {
     const MAXH = Math.min(1600, Math.round((isMob ? 420 : (city.tier === 3 ? 950 : city.tier === 1 ? 640 : 820)) * dna.sub * dna.sub));
     // v2.65: warm↔cool house palette + the city's rotated slice of it
     const warmP = Math.max(.12, Math.min(.95, .62 + dna.warm));
+    const sreg = dna.region;   // v2.69 REGIONAL CHARACTER: the houses wear the region's palettes too
     const wall = { pos: [], norm: [], uv: [], col: [] };   // style-2 punched-residential walls
     const roof = { pos: [], norm: [], uv: [], col: [] };   // pitches, gables, dormers, chimneys, doors
     const flat = { pos: [], norm: [], uv: [], col: [] };   // lawns + driveways
@@ -2412,9 +2420,10 @@ export const CITY = (() => {
             const hx = A[0] + ux * d + px * hv * side, hz = A[1] + uz * d + pz * hv * side;
             const srnd = _mulberry(hashStr('h' + (city.key || 'c') + placed));
             // v2.65: warm↔cool palette choice + the city's rotated slice
-            const HPAL = srnd() < warmP ? PAL_WARM : PAL_COOL;
+            const HPAL = srnd() < warmP ? (sreg ? sreg.warm : PAL_WARM) : (sreg ? sreg.cool : PAL_COOL);
             const tint = jit(colOf(HPAL[(Math.floor(srnd() * HPAL.length) + dna.palOff) % HPAL.length]), 1.24 + srnd() * .16);
-            const shinC = jit(colOf(SHINGLES[(Math.floor(srnd() * SHINGLES.length) + dna.palOff) % SHINGLES.length]), .9 + srnd() * .2);
+            const SHN2 = sreg && sreg.shingles ? sreg.shingles : SHINGLES;
+            const shinC = jit(colOf(SHN2[(Math.floor(srnd() * SHN2.length) + dna.palOff) % SHN2.length]), .9 + srnd() * .2);
             const uOff = Math.floor(srnd() * 16), vOff = Math.floor(srnd() * 4);
             let hp = [
               [hx - ux * HW / 2 - px * HD / 2, hz - uz * HW / 2 - pz * HD / 2],
