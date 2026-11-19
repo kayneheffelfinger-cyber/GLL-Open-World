@@ -341,11 +341,11 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.78 — COMPANY GROUNDWORK', `
-    <p><b>Companies and stocks are on the way.</b></p>
-    <div class="kv"><span class="k">COMPANIES</span><span class="v">shared bank, partners, roles — coming soon on the hosted site</span></div>
-    <div class="kv"><span class="k">STOCKS</span><span class="v">every company gets its own stock — coming soon</span></div>
-    <div class="kv"><span class="k">TODAY</span><span class="v">nothing changes: it stays hidden until the server turns it on</span></div>
+  openModal('Welcome to v2.79 — COMPANY POLISH', `
+    <p><b>The company and stock windows get a proper look.</b></p>
+    <div class="kv"><span class="k">CHART</span><span class="v">a real price chart with area fill, high and low, and a live last-price dot</span></div>
+    <div class="kv"><span class="k">ORDER BOOK</span><span class="v">bids and asks with depth bars, and a big price headline</span></div>
+    <div class="kv"><span class="k">STATUS</span><span class="v">still hidden until the hosted server turns companies on</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }

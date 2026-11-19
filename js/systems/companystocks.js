@@ -48,14 +48,28 @@ export const STK = (() => {
       await Promise.all([loadList(), M.sel ? loadQuote(M.sel) : null, loadMine()]); render();
     }, 5000);
   }
+  // v2.79: a real chart — soft gradient area, faint grid, high/low labels, a live dot on the last price
   function spark(pts) {
     if (!pts || pts.length < 2) return '<p class="co-sub">No history yet.</p>';
     const xs = pts.map(p => +p[0]), ys = pts.map(p => +p[1]);
     const x0 = Math.min(...xs), x1 = Math.max(...xs) || 1, y0 = Math.min(...ys), y1 = Math.max(...ys);
-    const W = 320, Hh = 70, sy = y1 - y0 || 1, sx = x1 - x0 || 1;
-    const d = pts.map((p, i) => (i ? 'L' : 'M') + ((p[0] - x0) / sx * W).toFixed(1) + ' ' + (Hh - 4 - (p[1] - y0) / sy * (Hh - 8)).toFixed(1)).join(' ');
-    const up = ys[ys.length - 1] >= ys[0];
-    return '<svg class="st-spark" viewBox="0 0 ' + W + ' ' + Hh + '" preserveAspectRatio="none"><path d="' + d + '" fill="none" stroke="' + (up ? '#48BB78' : '#FC8181') + '" stroke-width="2"/></svg>';
+    const W = 320, Hh = 96, sy = y1 - y0 || 1, sx = x1 - x0 || 1, pad = 8;
+    const X = v => (v - x0) / sx * W, Y = v => Hh - pad - (v - y0) / sy * (Hh - pad * 2);
+    const d = pts.map((p, i) => (i ? 'L' : 'M') + X(p[0]).toFixed(1) + ' ' + Y(p[1]).toFixed(1)).join(' ');
+    const up = ys[ys.length - 1] >= ys[0], col = up ? '#48BB78' : '#FC8181';
+    const lastY = Y(ys[ys.length - 1]);
+    const grid = [.25, .5, .75].map(f => '<line x1="0" x2="' + W + '" y1="' + (Hh * f).toFixed(1) + '" y2="' + (Hh * f).toFixed(1) + '" stroke="rgba(255,255,255,.06)" stroke-width="1" vector-effect="non-scaling-stroke"/>').join('');
+    return '<div class="st-chart"><svg class="st-spark" viewBox="0 0 ' + W + ' ' + Hh + '" preserveAspectRatio="none">' +
+      '<defs><linearGradient id="stg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + col + '" stop-opacity=".28"/><stop offset="1" stop-color="' + col + '" stop-opacity="0"/></linearGradient></defs>' + grid +
+      '<path d="' + d + ' L' + W + ' ' + Hh + ' L0 ' + Hh + ' Z" fill="url(#stg)"/>' +
+      '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>' +
+      '<span class="st-hi">' + px(y1) + '</span><span class="st-lo">' + px(y0) + '</span><span class="st-rng">7 DAYS</span>' +
+      '<i class="st-dot" style="top:' + (lastY / Hh * 100).toFixed(1) + '%;background:' + col + '"></i></div>';
+  }
+  // one side of the order book, each level with a depth bar behind it
+  function bookSide(levels, cls) {
+    const rows = (levels || []).slice(0, 4), mx = Math.max(1, ...rows.map(l => +l[1] || 0));
+    return rows.length ? rows.map(l => '<div class="' + cls + ' st-lvl" style="--d:' + Math.round((+l[1] || 0) / mx * 100) + '%"><span>' + px(l[0]) + '</span><span>' + (+l[1]).toLocaleString('en-US') + '</span></div>').join('') : '<div class="st-lvl co-sub">none</div>';
   }
   function render() {
     const body = document.getElementById('st-body'); if (!body) return;
@@ -71,11 +85,11 @@ export const STK = (() => {
   function quoteHTML() {
     const q = M.quote.quote || {}, bk = M.quote.book || { bids: [], asks: [] }, b = q.bands || {};
     return '<div class="co-card"><div class="msec">' + esc(q.ticker || M.sel) + ' · ' + esc(q.name || '') + '</div>' +
-      '<div class="kv"><span class="k">LAST</span><span class="v">' + px(q.last) + ' <span class="' + (q.changePct >= 0 ? 'g' : 'r') + '">' + pc(q.changePct) + '</span></span></div>' + spark(M.hist) +
+      '<div class="st-hero"><b>' + px(q.last) + '</b><span class="st-chip ' + (q.changePct >= 0 ? 'g' : 'r') + '">' + pc(q.changePct) + '</span></div>' + spark(M.hist) +
       '<div class="kv"><span class="k">BID / ASK</span><span class="v">' + (q.bid ? px(q.bid) : '—') + ' / ' + (q.ask ? px(q.ask) : '—') + '</span></div>' +
       '<div class="kv"><span class="k">TODAY\'S BAND</span><span class="v">' + px(b.min) + ' – ' + px(b.max) + (q.halted ? ' · <b class="r">TRADING HALTED</b>' : '') + '</span></div>' +
       '<div class="kv"><span class="k">SHARES</span><span class="v">' + (+q.shares || 0).toLocaleString('en-US') + ' · cap ' + fmt$(q.marketCap) + '</span></div>' +
-      '<div class="st-book"><div>' + (bk.bids || []).slice(0, 4).map(l => '<div class="g">' + px(l[0]) + ' × ' + l[1] + '</div>').join('') + '</div><div>' + (bk.asks || []).slice(0, 4).map(l => '<div class="r">' + px(l[0]) + ' × ' + l[1] + '</div>').join('') + '</div></div>' +
+      '<div class="st-book"><div><div class="st-bh">BIDS</div>' + bookSide(bk.bids, 'g') + '</div><div><div class="st-bh">ASKS</div>' + bookSide(bk.asks, 'r') + '</div></div>' +
       '<div class="co-row" style="margin-top:8px"><select id="st-side"><option value="buy">BUY</option><option value="sell">SELL</option></select><select id="st-type"><option value="market">MARKET</option><option value="limit">LIMIT</option></select><input id="st-qty" type="number" min="1" step="1" placeholder="shares" style="width:90px"><input id="st-lim" type="number" min="0.01" step="0.01" placeholder="limit $" style="width:90px"><button class="tpbtn" data-st="order">PLACE ORDER</button></div>' +
       '<p class="co-sub">Orders are matched by the server against other real players, never against yourself. Prices stay inside the daily band.</p></div>';
   }
