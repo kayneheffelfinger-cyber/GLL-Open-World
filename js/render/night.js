@@ -341,11 +341,11 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.68 — RUSH HOUR', `
-    <p><b>The streets finally move.</b></p>
-    <div class="kv"><span class="k">TRAFFIC</span><span class="v">cars drive the real road net — right-hand lanes, class speeds (motorway to side street), full stops for you at the curb</span></div>
-    <div class="kv"><span class="k">STREET SMART</span><span class="v">cars queue bumper-to-bumper, hop to connected streets at the ends, and only U-turn at dead ends</span></div>
-    <div class="kv"><span class="k">THE FLEET</span><span class="v">20/30/40 cars by city tier (halved on phones and LITE detail), taxis included — same look as the parked rows</span></div>
+  openModal('Welcome to v2.72 — TRADING FLOOR', `
+    <p><b>The Open Exchange, redrawn.</b></p>
+    <div class="kv"><span class="k">LIVE CHART</span><span class="v">every symbol gets a big price, change pill, high/low and a live line chart</span></div>
+    <div class="kv"><span class="k">ORDER FORM UP TOP</span><span class="v">place orders right under the chart — big BUY and SELL buttons, no scrolling</span></div>
+    <div class="kv"><span class="k">FIXED</span><span class="v">the order book's prices were invisible (text and background were the same color) — they read again</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }

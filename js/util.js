@@ -5,6 +5,7 @@
 // ====================================================================
 import * as THREE from 'three';
 import { CITIES, DEG_M } from './config.js';
+import { regionOf } from './regions.js';   // v2.69: pure data, no imports — keeps util a leaf
 
 // ---- deterministic rng --------------------------------------------
 export function _ihash(x, y, s) {
@@ -139,11 +140,12 @@ export function cityDNA(meta) {
       : 4 + Math.round(r3 * 1.6);
   const radials = 9 + Math.round(r4 * (tier === 3 ? 11 : tier === 2 ? 9 : 7));
   // LOOK — warm↔cool palette bias (±.35 rides the existing warmP roll)
-  const warm = (rnd() - .5) * .7;
+  const reg = regionOf(key, meta && meta.lat, meta && meta.lon);   // v2.69 REGIONAL CHARACTER (null = neutral, the v2.65 look)
+  const warm = (rnd() - .5) * .7 + (reg ? reg.warmBias : 0);
   // LOOK — height character: untagged building heights × this
-  const tall = .82 + rnd() * .5;
+  const tall = (.82 + rnd() * .5) * (reg ? reg.tall : 1);
   // LOOK — facade style bias (+ = curtain glass downtown, − = classic)
-  const glass = (rnd() - .5) * .5;
+  const glass = (rnd() - .5) * .5 + (reg ? reg.glass : 0);
   // LOOK — greenery: street-tree + park density
   const green = .6 + ((hashStr(key + 'g') % 1000) / 1000) * .9;
   // LOOK — suburb house scale: compact rows ↔ villas
@@ -152,7 +154,7 @@ export function cityDNA(meta) {
   // every shared palette, so no two downtowns wear the same colors
   const palOff = hashStr(key + 'p');
   const dna = {
-    spread, sub, rings, radials, warm, tall, glass, green, villa, palOff,
+    spread, sub, rings, radials, warm, tall, glass, green, villa, palOff, region: reg,
     subR0: 880,
     subR1: Math.round(2360 * sub),
   };

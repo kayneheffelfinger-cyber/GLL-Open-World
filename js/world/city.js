@@ -519,6 +519,28 @@ export const CITY = (() => {
           }
         }
       }
+      // v2.71 LANE LINES: wide avenues (cls 3, 15 m+) get white dashed lane
+      // dividers a quarter-width either side of the yellow center — the
+      // second reference picture's boulevards. Short dashes, long gaps, and
+      // they stop clear of every junction like the center line does.
+      if (rd.cls === 3 && rd.w >= 15 && !rd.ped && !rd.country) {
+        for (const side of [1, -1]) {
+          const off = rd.w / 4;
+          for (let i = 0; i < pts.length - 1; i++) {
+            const [ax, az] = pts[i], [bx, bz] = pts[i + 1];
+            const dx = bx - ax, dz = bz - az, len = Math.hypot(dx, dz);
+            if (len < 10) continue;
+            const ux = dx / len, uz = dz / len;
+            const px = -uz * off * side, pz = ux * off * side;
+            for (let d = 4; d < len - 4; d += 8) {
+              const e = Math.min(d + 2.6, len - .5);
+              const mx = ax + ux * (d + e) / 2 + px, mz = az + uz * (d + e) / 2 + pz;
+              if (inJunction(mx, mz, ri, 3.2)) continue;
+              rib(mark, ax + ux * d + px, az + uz * d + pz, ax + ux * e + px, az + uz * e + pz, .2, .0575, cWht);
+            }
+          }
+        }
+      }
       // white edge lines on main avenues (cls 3) — v2.64: substepped so
       // they, too, break at junctions
       if (rd.cls === 3) {
@@ -850,11 +872,24 @@ export const CITY = (() => {
       // the city's ROTATED slice — downtowns stop wearing the same colors
       const srnd = _mulberry(hashStr('s' + b.bkey));
       const warmP = Math.min(.96, Math.max(.06, 1.15 - h / 44 + dna.warm));
-      const PAL = srnd() < warmP ? PAL_WARM : PAL_COOL;
+      // v2.69 REGIONAL CHARACTER: the city's REGION swaps in its own wall,
+      // shingle and flat-deck palettes (js/regions.js); null = the stock set
+      const reg = dna.region;
+      const PAL = srnd() < warmP ? (reg ? reg.warm : PAL_WARM) : (reg ? reg.cool : PAL_COOL);
       // v2.67 THE ARCHITECT (picture pass): the walls settle to a muted
       // FLAT mid-tone — the low-poly reference look reads calm and clean,
       // with the grass, water and gold frames carrying the saturation
-      const tint = jit(colOf(PAL[(Math.floor(srnd() * PAL.length) + dna.palOff) % PAL.length]), 1.02 + srnd() * .1);
+      let tint = jit(colOf(PAL[(Math.floor(srnd() * PAL.length) + dna.palOff) % PAL.length]), 1.02 + srnd() * .1);
+      // v2.70 DARK GLASS: the second reference picture's downtown is tall
+      // charcoal glass. Towers (26 m+) roll a glassy share — the city's
+      // own glass bias decides how many — and those walls pull toward
+      // dark slate (the facade texture multiplies by the wall tint, so the
+      // windows go deep and the mullions stay faint). Its own hash roll:
+      // the existing srnd sequence is untouched.
+      if (h >= 26) {
+        const dr = _mulberry(hashStr('g' + b.bkey))();
+        if (dr < Math.max(.3, Math.min(.92, .62 + dna.glass))) tint = tint.clone().lerp(colOf(h >= 60 ? 0x23272d : 0x30353c), h >= 60 ? .74 : .6);
+      }
       const shopTint = h >= 8.5 ? tint.clone().lerp(colOf(0xffffff), .5) : null;
       const y0 = shopTint ? 3.55 : .15;
       const sr = srnd();
@@ -865,15 +900,19 @@ export const CITY = (() => {
       else style = sr < .55 ? 0 : 2;                   // low-rise: classic or punched
       const uOff = Math.floor(srnd() * 16);             // shift lit-window pattern
       const vOff = Math.floor(srnd() * 4);
-      const deckPool = h >= 12 ? ROOF_DECKS.slice(0, 3) : ROOF_DECKS;   // v2.67: mid-rise+ flat roofs lean GRAY (the reference skyline); low-rise keeps the gravel/tan mix
+      const deckPool = reg && reg.decks ? reg.decks : h >= 12 ? ROOF_DECKS.slice(0, 3) : ROOF_DECKS;   // v2.67: mid-rise+ flat roofs lean GRAY (the reference skyline); low-rise keeps the gravel/tan mix
       const deckC = jit(colOf(deckPool[(Math.floor(srnd() * deckPool.length) + dna.palOff) % deckPool.length]), .8 + srnd() * .14);
       const rimC = jit(colOf(TRIMS[(Math.floor(srnd() * TRIMS.length) + dna.palOff) % TRIMS.length]), .9 + srnd() * .2);
       const trimC = jit(rimC, 1.1);
-      const shinC = jit(colOf(SHINGLES[(Math.floor(srnd() * SHINGLES.length) + dna.palOff) % SHINGLES.length]), .9 + srnd() * .2);
+      const SHN = reg && reg.shingles ? reg.shingles : SHINGLES;
+      const shinC = jit(colOf(SHN[(Math.floor(srnd() * SHN.length) + dna.palOff) % SHN.length]), .9 + srnd() * .2);
       // ---- silhouette roll ----
       let obb = null;
       if (h <= 16.5 && area >= 60 && p.length <= 8) obb = obbOf(p);
-      const isPitched = !!(obb && obb.area && area / obb.area >= .78 && Math.min(obb.Lu, obb.Lv) >= 3.6);
+      // v2.69: its own deterministic roll (never touches srnd's sequence) — a
+      // flat-roof region turns that share of would-be gables into flat decks
+      const flatRoof = !!(reg && reg.flat && _mulberry(hashStr('f' + b.bkey))() < reg.flat);
+      const isPitched = !flatRoof && !!(obb && obb.area && area / obb.area >= .78 && Math.min(obb.Lu, obb.Lv) >= 3.6);
       const tiered = h >= 40 && area >= 900 && srnd() < .55;
       if (tintsUsed.length < 60) tintsUsed.push(hexOf(tint) + (isPitched ? ' p' : tiered ? ' t' : ''));
       if (roofsUsed.length < 60) roofsUsed.push(hexOf(isPitched ? shinC : deckC));
@@ -1560,6 +1599,49 @@ export const CITY = (() => {
     return tex;
   }
 
+  // v2.71 PARCELS: the first reference picture's plots are flat bright-green
+  // parcels, each with a small dark price pill ("$12,190"). ONE atlas canvas
+  // holds every plot's pill (128x32 cells, 8 across, up to 256 cells) and the
+  // Points cloud reads its own cell via a patched PointsMaterial — still
+  // one draw call for every label in the city, no per-plot texture.
+  const PILL_W = 128, PILL_H = 32, ATLAS = 1024, ATLAS_COLS = ATLAS / PILL_W;
+  function priceAtlas(recs) {
+    const cv = document.createElement('canvas'); cv.width = ATLAS; cv.height = ATLAS;
+    const ctx = cv.getContext('2d');
+    ctx.font = '700 19px Arial, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    recs.forEach((r, i) => {
+      if (i >= ATLAS_COLS * (ATLAS / PILL_H)) return;
+      const x = (i % ATLAS_COLS) * PILL_W, y = Math.floor(i / ATLAS_COLS) * PILL_H;
+      const txt = '$' + Math.round(r.price).toLocaleString('en-US');
+      const w = Math.min(PILL_W - 6, ctx.measureText(txt).width + 18);
+      const px = x + (PILL_W - w) / 2, py = y + 3, ph = PILL_H - 6;
+      ctx.fillStyle = 'rgba(22,27,33,.9)';
+      ctx.beginPath(); ctx.roundRect(px, py, w, ph, ph / 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(txt, x + PILL_W / 2, y + PILL_H / 2 + 1);
+    });
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
+    return tex;
+  }
+  // the owned/lot marker: a white house in a dark rounded square, like the
+  // tan parcels of the reference
+  function houseIconTex() {
+    const cv = document.createElement('canvas'); cv.width = 64; cv.height = 64;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = 'rgba(22,27,33,.92)'; ctx.beginPath(); ctx.roundRect(6, 6, 52, 52, 12); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.moveTo(32, 15); ctx.lineTo(48, 30); ctx.lineTo(43, 30); ctx.lineTo(43, 46); ctx.lineTo(37, 46); ctx.lineTo(37, 35); ctx.lineTo(27, 35); ctx.lineTo(27, 46); ctx.lineTo(21, 46); ctx.lineTo(21, 30); ctx.lineTo(16, 30); ctx.closePath(); ctx.fill();
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }
+  let _houseTex = null;
+  const getHouseTex = () => _houseTex || (_houseTex = houseIconTex());
+
   let plotViz = null;   // { pads, dashCol, dollarPos, cGreen, cOwned }
 
   function buildPlots(city) {
@@ -1724,22 +1806,22 @@ export const CITY = (() => {
             // the lot's own mesh — sand pad, white dashed stakes, gold ⌂
             const g = new THREE.Group();
             const pad = new THREE.Mesh(new THREE.PlaneGeometry(LW, LD),
-              new THREE.MeshLambertMaterial({ color: 0xc9a86a, transparent: true, opacity: .9 }));
+              new THREE.MeshLambertMaterial({ color: 0xe6c872, transparent: true, opacity: .95 }));   // v2.71: the reference's sand-gold parcel
             pad.rotation.x = -Math.PI / 2; pad.position.y = .105;
             g.add(pad);
             const hwq = LW / 2 - .5, hdq = LD / 2 - .5;
             const pts = [new THREE.Vector3(-hwq, .13, -hdq), new THREE.Vector3(hwq, .13, -hdq),
               new THREE.Vector3(hwq, .13, hdq), new THREE.Vector3(-hwq, .13, hdq), new THREE.Vector3(-hwq, .13, -hdq)];
             const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
-              new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 1.3, gapSize: .8, transparent: true, opacity: .95 }));
+              new THREE.LineDashedMaterial({ color: 0xc8a24e, dashSize: 1.3, gapSize: .8, transparent: true, opacity: .9 }));
             line.computeLineDistances();
             g.add(line);
             if (!_lotSpriteMat) {
-              _lotMarkerTex = lotMarkerTex();
+              _lotMarkerTex = getHouseTex();   // v2.71: the white-house-in-a-dark-square icon (lotMarkerTex kept as the fallback glyph)
               _lotSpriteMat = new THREE.SpriteMaterial({ map: _lotMarkerTex, transparent: true, depthWrite: false });
             }
             const sp = new THREE.Sprite(_lotSpriteMat);
-            sp.scale.set(4, 4, 1); sp.position.y = 5.2;
+            sp.scale.set(4.6, 4.6, 1); sp.position.y = 5.2;
             g.add(sp);
             g.position.set(cx - AX, 0, cz - AZ);
             g.rotation.y = rotY;
@@ -1757,16 +1839,16 @@ export const CITY = (() => {
   // instanced plot layer: pads + dashed borders + floating $ markers
   function buildPlotViz() {
     const N = plotRecs.length;
-    const cGreen = new THREE.Color(0x48bb78), cOwned = new THREE.Color(0x2f8f5b);
+    const cGreen = new THREE.Color(0x5fd07e), cOwned = new THREE.Color(0xe6c872);   // v2.71: the reference's bright parcel green and sand-gold
     // pads — one InstancedMesh, per-instance color
     const padGeo = new THREE.PlaneGeometry(1, 1); padGeo.rotateX(-Math.PI / 2);
     const pads = new THREE.InstancedMesh(padGeo,
-      new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: .55 }), N);
+      new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: .92 }), N);
     pads.receiveShadow = true;
     // dashed borders — one merged LineSegments, vertex colors
     const dPos = new Float32Array(N * 8 * 3), dCol = new Float32Array(N * 8 * 3);
     // $ markers — one Points cloud (camera-facing billboards)
-    const $Pos = new Float32Array(N * 3);
+    const $Pos = new Float32Array(N * 3), $Cell = new Float32Array(N * 2);
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3();
     plotRecs.forEach((p, i) => {
       p.inst = i; p.v0 = i * 8;
@@ -1786,10 +1868,11 @@ export const CITY = (() => {
           dPos[vi * 3] = (p.x - AX) + lx * c + lz * s;
           dPos[vi * 3 + 1] = .21;
           dPos[vi * 3 + 2] = (p.z - AZ) - lx * s + lz * c;
-          dCol[vi * 3] = 1; dCol[vi * 3 + 1] = 1; dCol[vi * 3 + 2] = 1;
+          dCol[vi * 3] = .3; dCol[vi * 3 + 1] = .72; dCol[vi * 3 + 2] = .44;   // v2.71: a soft darker-green edge, not white stakes
         }
       }
       $Pos[i * 3] = p.x - AX; $Pos[i * 3 + 1] = 4.4; $Pos[i * 3 + 2] = p.z - AZ;
+      $Cell[i * 2] = (i % ATLAS_COLS) * PILL_W / ATLAS; $Cell[i * 2 + 1] = 1 - (Math.floor(i / ATLAS_COLS) + 1) * PILL_H / ATLAS;   // canvas row -> texture v (flipY)
     });
     pads.instanceMatrix.needsUpdate = true;
     plotGroup.position.set(AX, 0, AZ);   // v2.27: the whole plot layer is city-local
@@ -1804,10 +1887,21 @@ export const CITY = (() => {
     const pg = new THREE.BufferGeometry();
     const dollarPos = new THREE.BufferAttribute($Pos, 3);
     pg.setAttribute('position', dollarPos);
-    const dollars = new THREE.Points(pg, new THREE.PointsMaterial({
-      map: _dollarTex || (_dollarTex = dollarTex()), transparent: true, depthWrite: false,
-      size: 8.5, sizeAttenuation: true,
-    }));
+    pg.setAttribute('aCell', new THREE.BufferAttribute($Cell, 2));
+    // v2.71: the point's square is sampled as a 4:1 band of the pill's atlas cell
+    const pm = new THREE.PointsMaterial({ map: priceAtlas(plotRecs), transparent: true, depthWrite: false, size: 22, sizeAttenuation: true });
+    pm.onBeforeCompile = sh => {
+      sh.vertexShader = sh.vertexShader
+        .replace('void main() {', 'attribute vec2 aCell;\nvarying vec2 vCell;\nvoid main() {\n  vCell = aCell;');
+      sh.fragmentShader = sh.fragmentShader
+        .replace('void main() {', 'varying vec2 vCell;\nvoid main() {')
+        .replace('#include <map_particle_fragment>', `
+          vec2 pc = vec2(gl_PointCoord.x, 1.0 - gl_PointCoord.y);
+          if (abs(pc.y - .5) > .125) discard;
+          vec2 auv = vCell + vec2(pc.x * ${(PILL_W / ATLAS).toFixed(5)}, ((pc.y - .5) * 4.0 + .5) * ${(PILL_H / ATLAS).toFixed(5)});
+          diffuseColor *= texture2D( map, auv );`);
+    };
+    const dollars = new THREE.Points(pg, pm);
     plotGroup.add(dollars);
     plotViz = { pads, dashes, dollarPos, cGreen, cOwned };
   }
@@ -1822,7 +1916,7 @@ export const CITY = (() => {
     plotViz.pads.setColorAt(i, plotViz.cOwned);
     plotViz.pads.instanceColor.needsUpdate = true;
     const col = plotViz.dashes.geometry.attributes.color;
-    for (let v = rec.v0; v < rec.v0 + 8; v++) col.setXYZ(v, .96, .8, .455);
+    for (let v = rec.v0; v < rec.v0 + 8; v++) col.setXYZ(v, .8, .62, .28);   // v2.71: darker sand edge
     col.needsUpdate = true;
     plotViz.dollarPos.setY(i, -999);
     plotViz.dollarPos.needsUpdate = true;
@@ -1832,6 +1926,11 @@ export const CITY = (() => {
     ring.position.set(rec.x - AX, .2, rec.z - AZ);   // v2.27: city-local, like the layer
     plotGroup.add(ring);
     rec.ring = ring;
+    // v2.71: the reference's owned parcel carries a white house in a dark rounded square
+    const icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: getHouseTex(), transparent: true, depthWrite: false }));
+    icon.scale.set(4.4, 4.4, 1); icon.position.set(rec.x - AX, 4.2, rec.z - AZ);
+    plotGroup.add(icon);
+    rec.icon = icon;
   }
 
   // ---------- v2.14 — OPEN COUNTRY: pasture renderer -------------------
@@ -2253,6 +2352,7 @@ export const CITY = (() => {
     const MAXH = Math.min(1600, Math.round((isMob ? 420 : (city.tier === 3 ? 950 : city.tier === 1 ? 640 : 820)) * dna.sub * dna.sub));
     // v2.65: warm↔cool house palette + the city's rotated slice of it
     const warmP = Math.max(.12, Math.min(.95, .62 + dna.warm));
+    const sreg = dna.region;   // v2.69 REGIONAL CHARACTER: the houses wear the region's palettes too
     const wall = { pos: [], norm: [], uv: [], col: [] };   // style-2 punched-residential walls
     const roof = { pos: [], norm: [], uv: [], col: [] };   // pitches, gables, dormers, chimneys, doors
     const flat = { pos: [], norm: [], uv: [], col: [] };   // lawns + driveways
@@ -2412,9 +2512,10 @@ export const CITY = (() => {
             const hx = A[0] + ux * d + px * hv * side, hz = A[1] + uz * d + pz * hv * side;
             const srnd = _mulberry(hashStr('h' + (city.key || 'c') + placed));
             // v2.65: warm↔cool palette choice + the city's rotated slice
-            const HPAL = srnd() < warmP ? PAL_WARM : PAL_COOL;
+            const HPAL = srnd() < warmP ? (sreg ? sreg.warm : PAL_WARM) : (sreg ? sreg.cool : PAL_COOL);
             const tint = jit(colOf(HPAL[(Math.floor(srnd() * HPAL.length) + dna.palOff) % HPAL.length]), 1.24 + srnd() * .16);
-            const shinC = jit(colOf(SHINGLES[(Math.floor(srnd() * SHINGLES.length) + dna.palOff) % SHINGLES.length]), .9 + srnd() * .2);
+            const SHN2 = sreg && sreg.shingles ? sreg.shingles : SHINGLES;
+            const shinC = jit(colOf(SHN2[(Math.floor(srnd() * SHN2.length) + dna.palOff) % SHN2.length]), .9 + srnd() * .2);
             const uOff = Math.floor(srnd() * 16), vOff = Math.floor(srnd() * 4);
             let hp = [
               [hx - ux * HW / 2 - px * HD / 2, hz - uz * HW / 2 - pz * HD / 2],
@@ -2423,6 +2524,20 @@ export const CITY = (() => {
               [hx - ux * HW / 2 + px * HD / 2, hz - uz * HW / 2 + pz * HD / 2]];
             if (_polyArea(hp) < 0) hp.reverse();
             wallBandSub(hp, .15, .15 + hh, tint, uOff, vOff);
+            // v2.71 FLAT HOUSES: a flat-roof region (Cairo, Athens, Dubai, Havana,
+            // Miami...) builds its houses as flat-decked blocks with a low
+            // parapet instead of gables — its own deterministic roll, so the
+            // existing srnd sequence (and every gabled neighbor) is untouched
+            if (sreg && sreg.flat && _mulberry(hashStr('hf' + (city.key || 'c') + placed))() < sreg.flat * .9) {
+              const y1 = .15 + hh, DK = [0x8a8378, 0x6b5d4a, 0x9a948a, 0x7a746a];
+              const deckH = jit(colOf(DK[(placed + dna.palOff) % DK.length]), .95);
+              pushQuadN(roof, [hp[0][0], y1, hp[0][1]], [hp[1][0], y1, hp[1][1]], [hp[2][0], y1, hp[2][1]], [hp[3][0], y1, hp[3][1]], deckH, [0, 1, 0]);
+              const rim = jit(tint, 1.08);
+              for (let e = 0; e < 4; e++) {
+                const q1 = hp[e], q2 = hp[(e + 1) % 4], ex = q2[0] - q1[0], ez = q2[1] - q1[1], el = Math.hypot(ex, ez) || 1;
+                pushQuadN(roof, [q1[0], y1, q1[1]], [q1[0], y1 + .6, q1[1]], [q2[0], y1 + .6, q2[1]], [q2[0], y1, q2[1]], rim, [ez / el, 0, -ex / el]);
+              }
+            } else
             subRoof(hx, hz, ux, uz, HW, HD, .15 + hh, tint, shinC, srnd, side);
             // door + porch on the street face
             const fpx = -px * side, fpz = -pz * side;
