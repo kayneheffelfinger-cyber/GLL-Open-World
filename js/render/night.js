@@ -341,11 +341,10 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.69 — REGIONAL CHARACTER', `
-    <p><b>Every city now looks like where it is.</b></p>
-    <div class="kv"><span class="k">REGIONS</span><span class="v">13 ways the world builds — brick and steel, stucco, whitewash, zinc mansards, sand, glass supertowers — each with its own colors and roofs</span></div>
-    <div class="kv"><span class="k">FLAT OR PITCHED</span><span class="v">Cairo, Athens and Dubai build flat roofs; Amsterdam, Vienna and Berlin keep the gables</span></div>
-    <div class="kv"><span class="k">LANDMARKS</span><span class="v">One World Trade, Willis Tower, Burj Khalifa, Taipei 101, Hagia Sophia, the Spire of Dublin and more, standing at their real spots</span></div>
+  openModal('Welcome to v2.70 — DARK GLASS', `
+    <p><b>Downtown goes charcoal.</b></p>
+    <div class="kv"><span class="k">DARK GLASS</span><span class="v">most towers over 26 m are now deep charcoal curtain-wall glass — the glassier the city, the more of them</span></div>
+    <div class="kv"><span class="k">MOODY TONE</span><span class="v">a warmer sun and a lower sky fill give deeper shadows — switch back to CLASSIC in Help → GRAPHICS</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }

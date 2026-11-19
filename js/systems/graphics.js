@@ -36,9 +36,30 @@ function setShadows(on) {
     else m.needsUpdate = true;
   });
 }
+// v2.70 MOODY tone: the second reference picture is a darker, higher-
+// contrast city. The lights are found in the world scene by type (their
+// v2.67 base intensities are remembered the first time) — MOODY eases
+// the sky fill down and the sun up, so shadows and tower faces separate.
+let _base = null;
+let _toneWait = null;
+function setTone(t) {
+  if (!worldScene) {   // the world scene is built lazily on the first enterWorld — apply the saved tone the moment it exists
+    if (!_toneWait) _toneWait = setInterval(() => { if (worldScene) { clearInterval(_toneWait); _toneWait = null; setTone(norm(STATE.gfx || {}).tone); } }, 400);
+    return;
+  }
+  const lights = [];
+  worldScene.traverse(o => { if (o.isHemisphereLight || o.isDirectionalLight) lights.push(o); });
+  if (!_base) _base = new Map(lights.map(l => [l, { i: l.intensity, c: l.color.getHex() }]));
+  for (const l of lights) {
+    const b = _base.get(l) || (_base.set(l, { i: l.intensity, c: l.color.getHex() }), _base.get(l));
+    const moody = t !== 'classic';
+    l.intensity = b.i * (moody ? (l.isHemisphereLight ? .8 : 1.14) : 1);
+    if (l.isDirectionalLight) l.color.setHex(moody ? 0xffe9d0 : b.c);
+  }
+}
 function setScale(f) { renderer.setPixelRatio(DPR0 * (f === .75 || f === .5 ? f : 1)); }
 function setTrees(on) { try { WF.setShown(on !== false); } catch (e) { } }
-const norm = g => ({ shadows: g.shadows !== false, trees: g.trees !== false, scale: g.scale === .75 || g.scale === .5 ? g.scale : 1, lite: !!g.lite });
+const norm = g => ({ shadows: g.shadows !== false, trees: g.trees !== false, scale: g.scale === .75 || g.scale === .5 ? g.scale : 1, lite: !!g.lite, tone: g.tone === 'classic' ? 'classic' : 'moody' });
 
 export const GFX = {
   // boot (after loadGame) + DEFAULTS — push STATE.gfx into the renderer/forest
@@ -47,6 +68,7 @@ export const GFX = {
     setShadows(g.shadows);
     setScale(g.scale);
     setTrees(g.trees);
+    setTone(g.tone);
     return g;
   },
   open() {
@@ -56,10 +78,11 @@ export const GFX = {
       const seg = (cur, opts) => opts.map(o =>
         `<button class="btn${o.v === cur ? ' primary' : ''}" data-v="${o.v}" style="flex:0 0 auto;padding:7px 13px">${o.label}</button>`).join(' ');
       openModal('Graphics — ' + GAME_VERSION, `
-        <p>Four levers on the picture. The first three apply the moment you press them; DETAIL applies the next time a city builds (leave and re-enter, or travel). Saved with your world.</p>
+        <p>Five levers on the picture. The first four apply the moment you press them; DETAIL applies the next time a city builds (leave and re-enter, or travel). Saved with your world.</p>
         <div class="kv"><span class="k">SHADOWS</span><span class="v" id="gf-sh">${seg(g.shadows ? 1 : 0, [{ v: 1, label: 'ON' }, { v: 0, label: 'OFF' }])}</span></div>
         <div class="kv"><span class="k">TREES</span><span class="v" id="gf-tr">${seg(g.trees ? 1 : 0, [{ v: 1, label: 'ON' }, { v: 0, label: 'OFF' }])}</span></div>
         <div class="kv"><span class="k">RENDER SCALE</span><span class="v" id="gf-sc">${seg(g.scale, [{ v: 1, label: '100%' }, { v: .75, label: '75%' }, { v: .5, label: '50%' }])}</span></div>
+        <div class="kv"><span class="k">TONE</span><span class="v" id="gf-tn">${seg(g.tone, [{ v: 'moody', label: 'MOODY' }, { v: 'classic', label: 'CLASSIC' }])}</span></div>
         <div class="kv"><span class="k">DETAIL</span><span class="v" id="gf-dt">${seg(g.lite ? 1 : 0, [{ v: 0, label: 'FULL' }, { v: 1, label: 'LITE' }])}</span></div>
         <p style="font-size:11px;color:var(--dim);margin-top:10px">LITE detail halves the street props — the densities phones already ship. TREES covers the world forest outside the cities; street trees stay.</p>
         <div style="display:flex;gap:8px;margin-top:14px">
@@ -70,9 +93,10 @@ export const GFX = {
       wire('gf-sh', v => { STATE.gfx.shadows = v === '1'; setShadows(STATE.gfx.shadows); toast(STATE.gfx.shadows ? 'Shadows on.' : 'Shadows off — a flatter, faster picture.'); });
       wire('gf-tr', v => { STATE.gfx.trees = v === '1'; setTrees(STATE.gfx.trees); toast(STATE.gfx.trees ? 'The world forest is back.' : 'World forest hidden — open country reads as parkland.'); });
       wire('gf-sc', v => { STATE.gfx.scale = +v; setScale(STATE.gfx.scale); toast('Render scale ' + Math.round(STATE.gfx.scale * 100) + '%.'); });
+      wire('gf-tn', v => { STATE.gfx.tone = v === 'classic' ? 'classic' : 'moody'; setTone(STATE.gfx.tone); toast(STATE.gfx.tone === 'moody' ? 'Moody tone — deeper shadows, a warmer sun.' : 'Classic tone — the bright v2.69 picture.'); });
       wire('gf-dt', v => { STATE.gfx.lite = v === '1'; toast(STATE.gfx.lite ? 'LITE detail — the next city you enter builds light.' : 'FULL detail — the next city you enter builds full.'); });
       document.getElementById('gf-x').onclick = closeModal;
-      document.getElementById('gf-def').onclick = () => { STATE.gfx = { shadows: true, trees: true, scale: 1, lite: false }; GFX.apply(); saveGame(); toast('Picture reset to defaults.'); draw(); };
+      document.getElementById('gf-def').onclick = () => { STATE.gfx = { shadows: true, trees: true, scale: 1, lite: false, tone: 'moody' }; GFX.apply(); saveGame(); toast('Picture reset to defaults.'); draw(); };
     };
     draw();
   },
@@ -80,5 +104,6 @@ export const GFX = {
   state() { return norm(STATE.gfx || {}); },
   dpr() { return renderer.getPixelRatio(); },
   shadows() { return renderer.shadowMap.enabled; },
+  tone() { return norm(STATE.gfx || {}).tone; },
 };
 window.GFX = GFX;
