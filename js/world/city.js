@@ -926,6 +926,8 @@ export const CITY = (() => {
       const tiered = h >= 40 && area >= 900 && srnd() < .55;
       // v2.77: a mid-rise setback — the upper block steps in and slides to one side
       const stepped = !tiered && h >= 20 && h < 44 && area >= 260 && p.length <= 12 && !isPitched && vr() < .34;
+      // v2.80: podium + tower — a wide low base with a narrower tower rising from a roof terrace
+      const podium = !tiered && !stepped && h >= 45 && area >= 700 && p.length <= 12 && !isPitched && vr() < .3;
       if (tintsUsed.length < 60) tintsUsed.push(hexOf(tint) + (isPitched ? ' p' : tiered ? ' t' : ''));
       if (roofsUsed.length < 60) roofsUsed.push(hexOf(isPitched ? shinC : deckC));
       // ---- build ----
@@ -941,6 +943,17 @@ export const CITY = (() => {
         roofDeck(p2, .15 + h, deckC);
         parapet(p2, .15 + h, rimC, jit(deckC, 1.1));
         clutter(p2, area * .46, .15 + h);
+      } else if (podium) {                              // v2.80 podium + tower
+        const hP = 9 + vr() * 5, k = .78 + vr() * .06;
+        const p2 = p.map(v => [cx + (v[0] - cx) * k, cz + (v[1] - cz) * k]);
+        if (_polyArea(p2) < 0) p2.reverse();
+        wallBand(p, y0, .15 + hP, tint, style, uOff, vOff, shopTint);
+        wallBand(p2, .15 + hP, .15 + h, tint, style, uOff + 3, vOff, null);
+        roofDeck(p, .15 + hP, jit(deckC2, 1.2));
+        parapet(p, .15 + hP, rimC, jit(deckC2, 1.3));
+        roofDeck(p2, .15 + h, deckC2);
+        parapet(p2, .15 + h, rimC, jit(deckC2, 1.1));
+        clutter(p2, area * .5, .15 + h);
       } else if (stepped) {                             // v2.77 stepped mid-rise + terrace
         const h1 = h * (.55 + vr() * .15), k = .72 + vr() * .08;
         let minR = 1e9; for (const v of p) minR = Math.min(minR, Math.hypot(v[0] - cx, v[1] - cz));
@@ -969,6 +982,11 @@ export const CITY = (() => {
             const g = p.map(v => [cx + (v[0] - cx) * .78, cz + (v[1] - cz) * .78]);
             if (_polyArea(g) < 0) g.reverse();
             roofDeck(g, .15 + h + .04, jit(colOf(0x5f8f4e), .88 + vr() * .22));
+          }
+          // v2.80 solar rows: a few dark-blue panel strips on some flat low/mid-rise roofs
+          if (h < 26 && area >= 250 && vr() < .15) {
+            let minR = 1e9; for (const v of p) minR = Math.min(minR, Math.hypot(v[0] - cx, v[1] - cz));
+            if (minR >= 7) for (let i = -1; i <= 1; i++) boxInto(trim, cx + i * 3.4, cz, .15 + h, .15 + h + .4, 1.3, Math.min(4.2, minR * .42), colOf(0x20395c));
           }
           // v2.77 crowns: towers that are not THE tallest get a mechanical
           // penthouse or a mast, so the skyline stops being flat-topped boxes

@@ -341,11 +341,10 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.79 — COMPANY POLISH', `
-    <p><b>The company and stock windows get a proper look.</b></p>
-    <div class="kv"><span class="k">CHART</span><span class="v">a real price chart with area fill, high and low, and a live last-price dot</span></div>
-    <div class="kv"><span class="k">ORDER BOOK</span><span class="v">bids and asks with depth bars, and a big price headline</span></div>
-    <div class="kv"><span class="k">STATUS</span><span class="v">still hidden until the hosted server turns companies on</span></div>
+  openModal('Welcome to v2.80 — SKYLINE II', `
+    <p><b>More variety in the skyline.</b></p>
+    <div class="kv"><span class="k">PODIUMS</span><span class="v">some big towers rise from a wide low base with a roof terrace</span></div>
+    <div class="kv"><span class="k">SOLAR</span><span class="v">dark-blue panel rows on some flat low-rise roofs</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }
