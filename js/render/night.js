@@ -341,12 +341,12 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.74 — OPEN GROUND', `
-    <p><b>Cities lose their square.</b></p>
-    <div class="kv"><span class="k">NO GRAY APRON</span><span class="v">the ground plate hugs the real blocks and stops at rivers and lakes; downtown corners round off</span></div>
-    <div class="kv"><span class="k">CURVED STREETS</span><span class="v">every neighborhood bends — grids, superblocks and lattices all curve, and a few connectors tie them to downtown</span></div>
-    <div class="kv"><span class="k">ONE GRASS</span><span class="v">the patchy green rectangles are gone; lawns and parks match the land</span></div>
-    <div class="kv"><span class="k">HOUSES</span><span class="v">more of them, and they stay visible from a high city view</span></div>
+  openModal('Welcome to v2.75 — OWN POWER', `
+    <p><b>Build your own power.</b></p>
+    <div class="kv"><span class="k">GENERATORS</span><span class="v">POWER panel → build solar, wind (land or sea), hydro (real OSM rivers only), coal and oil burners</span></div>
+    <div class="kv"><span class="k">OWN POWER</span><span class="v">feeds your businesses first — not metered, not billed — and sells the surplus at the grid price</span></div>
+    <div class="kv"><span class="k">CAPACITY</span><span class="v">demand vs capacity vs supply, live, in the POWER and Empire panels</span></div>
+    <div class="kv"><span class="k">BLACKOUTS</span><span class="v">when the utility feeder fails, businesses your units can't cover go dark until supply returns</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }

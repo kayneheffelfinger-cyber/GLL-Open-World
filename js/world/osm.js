@@ -107,7 +107,7 @@ out geom;`;
       } else if (t.leisure || t.landuse) {
         if (pts.length >= 4) greens.push({ poly: pts });
       } else if (t.natural === 'water' || t.waterway === 'riverbank') {
-        if (pts.length >= 4) waters.push({ poly: pts });
+        if (pts.length >= 4) waters.push({ poly: pts, river: t.waterway === 'riverbank' || t.water === 'river' });   // v2.75 OWN POWER: hydro turbines only go on river polygons
       }
     }
     return { roads, buildings, greens, waters };

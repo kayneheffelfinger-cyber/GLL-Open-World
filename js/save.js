@@ -133,6 +133,21 @@ export function loadGame() {
     for (const k of ['Wood', 'Stone', 'Steel', 'Glass']) { const v = +__mt[k]; if (isFinite(v) && v > 0) STATE.mat[k] = +Math.min(1e6, v).toFixed(1); }
     // v2.59 THE GRID: the power state (absent on older saves — grid at par, empty meters)
     STATE.pow = { g: { m: 1, pm: 1 }, b: {} };
+    // v2.75 OWN POWER: generators (absent on older saves — none built)
+    {
+      const __g = (p.gen && typeof p.gen === 'object') ? p.gen : {};
+      const __T = { solar: 1, wind: 1, hydro: 1, coal: 1, oil: 1 };
+      STATE.gen = {
+        sell: __g.sell === 0 || __g.sell === false ? 0 : 1,
+        t: isFinite(+__g.t) ? Math.min(1e9, Math.max(0, +__g.t)) : 12,
+        sold: isFinite(+__g.sold) ? Math.min(1e12, Math.max(0, +__g.sold)) : 0,
+        black: Math.min(99999, Math.max(0, (+__g.black) | 0)),
+        out: null,
+        units: (Array.isArray(__g.units) ? __g.units : []).filter(u => u && typeof u.id === 'string' && __T[u.t] && isFinite(+u.x) && isFinite(+u.z)).slice(0, 24)
+          .map(u => ({ id: u.id.slice(0, 24), t: u.t, x: +u.x, z: +u.z, on: u.on === 0 || u.on === false ? 0 : 1, sea: u.sea ? 1 : 0,
+            price: Math.min(1e7, Math.max(0, +u.price || 0)), spot: 0, burnt: Math.min(1e9, Math.max(0, +u.burnt || 0)), dry: 0, run: 0 })),
+      };
+    }
     // v2.62 DEEP WATER: the offshore oil rigs (absent on older saves — none built)
     STATE.rigs = (p.rigs || []).filter(r => r && typeof r.id === 'string' && r.id.charAt(0) === 'r' && isFinite(+r.x) && isFinite(+r.z) && +r.ore > 0)
       .slice(0, 8)
@@ -196,6 +211,7 @@ export function saveGame() {
       mat: (() => { const o = {}; for (const k of ['Wood', 'Stone', 'Steel', 'Glass']) { const v = +((STATE.mat || {})[k]) || 0; if (isFinite(v) && v > 0) o[k] = +Math.min(1e6, v).toFixed(1); } return o; })(),   // v2.56 GROUND UP (optional field — older builds ignore it)
       pow: (() => { const s = STATE.pow || {}, g = s.g || {}; const o = { g: { m: +(g.m || 1).toFixed(3), pm: +(g.pm || 1).toFixed(3) }, b: {} }; for (const k in (s.b || {})) { const e = s.b[k]; if (e && typeof e === 'object' && (isFinite(+e.m) || e.cut || isFinite(+e.due))) o.b[k] = { m: +Math.min(1e6, Math.max(0, +e.m || 0)).toFixed(1), cut: e.cut ? 1 : 0, due: +Math.min(1e6, Math.max(0, +e.due || 0)).toFixed(2) }; } return o; })(),   // v2.59 THE GRID (optional field — older builds ignore it)
       rigs: (STATE.rigs || []).map(r => ({ id: r.id, name: r.name, x: +r.x || 0, z: +r.z || 0, price: +r.price || 0, ore: Math.round(+r.ore || 0), got: +(+r.got || 0).toFixed(1), crew: r.crew | 0, walked: !!r.walked, wageAcc: +(+r.wageAcc || 0).toFixed(2), sto: +(+r.sto || 0).toFixed(1), near: r.near || null, nearKey: r.nearKey || null })),   // v2.62 DEEP WATER (optional field — older builds ignore it)
+      gen: (() => { const g = STATE.gen || {}; return { sell: g.sell === 0 ? 0 : 1, t: +(+g.t || 0).toFixed(2), sold: +(+g.sold || 0).toFixed(2), black: (g.black | 0), units: (g.units || []).slice(0, 24).map(u => ({ id: u.id, t: u.t, x: Math.round(+u.x || 0), z: Math.round(+u.z || 0), on: u.on ? 1 : 0, sea: u.sea ? 1 : 0, price: Math.round(+u.price || 0), burnt: +(+u.burnt || 0).toFixed(1) })) }; })(),   // v2.75 OWN POWER (optional field — older builds ignore it)
       gfx: STATE.gfx ? { sh: STATE.gfx.shadows === false ? 0 : 1, tr: STATE.gfx.trees === false ? 0 : 1, sc: STATE.gfx.scale === .75 || STATE.gfx.scale === .5 ? STATE.gfx.scale : 1, lt: STATE.gfx.lite ? 1 : 0, tn: STATE.gfx.tone === 'classic' ? 0 : 1 } : null,   // v2.66 PICTURE (optional field — older builds ignore it)
       dsg: (STATE.designs || []).slice(0, 12).map(d => ({ n: d.name, w: +d.w || 10, d: +d.d || 8, f: d.floors | 0, s: d.style || 'brick' })),   // v2.67 THE ARCHITECT (optional field — older builds ignore it; cost/days/income re-derive on load, so a balance tweak in a later build re-prices old designs honestly)
       market: STATE.market ? STATE.market.pack() : null,
