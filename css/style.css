@@ -498,22 +498,47 @@ table.menu td.m{font-family:var(--mono);color:var(--green)}
 .apbar i{display:block;height:100%;background:linear-gradient(90deg,var(--green),#A3DAFF)}
 
 /* ================= MARKET TERMINAL ================= */
-#market{position:absolute;top:0;right:0;bottom:26px;width:min(400px,94vw);display:flex;flex-direction:column;
-  background:var(--panel2);border-left:1px solid var(--line);box-shadow:-20px 0 60px rgba(0,0,0,.5);
+/* v2.72: the Open Exchange, redrawn — rounded cards, a quote + live chart on
+   top, the order form right under it, sand-gold/green accents like the map's
+   parcels. Every id the market.js render code uses is unchanged. */
+#market{position:absolute;top:0;right:0;bottom:26px;width:min(420px,94vw);display:flex;flex-direction:column;
+  background:linear-gradient(180deg,#171d29 0%,#11151d 100%);border-left:1px solid var(--line2);box-shadow:-20px 0 60px rgba(0,0,0,.55);
   transform:translateX(102%);transition:transform .22s ease;z-index:40}
 #market.open{transform:translateX(0)}
-#market .mh2{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;
+#market .mh2{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;
   border-bottom:1px solid var(--line2)}
-#market .mh2 .t{font-weight:800;font-size:13px;letter-spacing:1.5px;color:#fff}
-#market .mh2 .x{color:var(--mut);font-size:16px;padding:4px 8px;border-radius:4px}
+#market .mh2 .t{font-weight:800;font-size:13px;letter-spacing:1.8px;color:#fff;display:flex;align-items:center;gap:10px}
+#market .mh2 .live{display:inline-flex;align-items:center;gap:5px;font-size:9px;letter-spacing:1.2px;color:var(--green2);
+  background:rgba(72,187,120,.12);border:1px solid rgba(72,187,120,.3);border-radius:999px;padding:3px 8px 3px 7px}
+#market .mh2 .live i{width:6px;height:6px;border-radius:50%;background:var(--green2);box-shadow:0 0 8px var(--green2);animation:mlive 1.6s ease-in-out infinite}
+@keyframes mlive{50%{opacity:.35}}
+#market .mh2 .x{color:var(--mut);font-size:16px;padding:4px 8px;border-radius:8px}
 #market .mh2 .x:hover{color:#fff;background:rgba(255,255,255,.07)}
-#market .body{flex:1;overflow:auto;padding:12px 14px;display:flex;flex-direction:column;gap:12px}
-#comps{display:flex;gap:6px;flex-wrap:wrap}
-.comp{padding:6px 11px;border-radius:3px;border:1px solid var(--line);font-family:var(--mono);
-  font-size:11px;font-weight:700;color:var(--mut);cursor:pointer;letter-spacing:.5px}
-.comp.on{border-color:var(--blue);color:var(--blue);background:rgba(99,161,237,.1)}
-.comp .pp{color:var(--txt);font-weight:600;margin-left:6px}
-#book{border:1px solid var(--line2);border-radius:var(--r);overflow:hidden}
+#market .body{flex:1;overflow:auto;padding:12px 14px 18px;display:flex;flex-direction:column;gap:12px}
+.mcard{background:rgba(255,255,255,.028);border:1px solid var(--line2);border-radius:14px;padding:12px}
+#comps{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;flex:0 0 auto}
+#comps::-webkit-scrollbar{display:none}
+.comp{flex:1 1 0;display:flex;flex-direction:column;gap:1px;min-width:66px;padding:8px 9px;border-radius:12px;
+  border:1px solid var(--line2);background:rgba(255,255,255,.03);font-family:var(--mono);cursor:pointer}
+.comp:hover{background:rgba(255,255,255,.06)}
+.comp .cs{font-size:10px;font-weight:800;color:var(--mut);letter-spacing:1px}
+.comp .pp{font-size:13px;font-weight:700;color:var(--txt)}
+.comp .cc{font-size:9.5px;font-weight:700}
+.comp .cc.up,.mq-chg.up{color:var(--green2)}.comp .cc.dn,.mq-chg.dn{color:#FCA5A5}
+.comp.on{border-color:rgba(245,204,116,.7);background:rgba(245,204,116,.09)}
+.comp.on .cs{color:#f5cc74}
+#mquote{background:rgba(255,255,255,.028);border:1px solid var(--line2);border-radius:14px;padding:14px 14px 10px}
+#mquote .mq-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+#mquote .mq-sym{font-size:11px;font-weight:800;letter-spacing:2px;color:#f5cc74}
+#mquote .mq-name{font-size:12px;color:var(--mut);margin-top:2px}
+#mquote .mq-px{text-align:right}
+#mquote .mq-price{font-family:var(--mono);font-size:28px;font-weight:800;color:#fff;line-height:1}
+#mquote .mq-chg{display:inline-block;margin-top:6px;font-family:var(--mono);font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;background:rgba(255,255,255,.06)}
+#mquote .mq-chg.up{background:rgba(72,187,120,.14)}#mquote .mq-chg.dn{background:rgba(239,68,68,.14)}
+#mchart{display:block;width:100%;height:112px;margin-top:10px}
+#mquote .mq-hl{display:flex;justify-content:space-between;font-size:9.5px;letter-spacing:1.2px;color:var(--dim);padding-top:6px;border-top:1px solid var(--line2)}
+#mquote .mq-hl b{font-family:var(--mono);color:var(--txt);margin-left:4px;letter-spacing:0}
+#book{border:1px solid var(--line2);border-radius:10px;overflow:hidden}
 #book .bh{display:grid;grid-template-columns:1fr 1fr 1fr;padding:7px 10px;font-size:8.5px;
   letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--line2)}
 #book .bh span:nth-child(2),#book .bh span:nth-child(3){text-align:right}
@@ -522,42 +547,44 @@ table.menu td.m{font-family:var(--mono);color:var(--green)}
 .lvl .bar{position:absolute;top:0;bottom:0;right:0;opacity:.13}
 .lvl .pr{position:relative;font-weight:700}
 .lvl .sz,.lvl .cu{text-align:right;position:relative;color:var(--mut)}
-.lvl.ask .pr,.lvl.ask .bar{color:var(--red);background:var(--red)}
+.lvl.ask .pr{color:var(--red)}
 .lvl.ask .bar{background:var(--red)}
-.lvl.bid .pr,.lvl.bid .bar{color:var(--bull);background:var(--bull)}
+.lvl.bid .pr{color:var(--bull)}
 .lvl.bid .bar{background:var(--bull)}
-.lvl.last{background:rgba(99,161,237,.08);border-top:1px solid var(--line2);border-bottom:1px solid var(--line2);
+.lvl.last{background:rgba(245,204,116,.08);border-top:1px solid var(--line2);border-bottom:1px solid var(--line2);
   margin:2px 0;font-weight:800}
 .lvl.last .pr{color:#fff;font-size:13px}
 .lvl.last .sz{color:var(--mut);font-size:9.5px}
-.lvl.last .cu{color:var(--blue);font-size:9.5px}
+.lvl.last .cu{color:#f5cc74;font-size:9.5px}
 .lvl .you{color:#22D3EE;font-size:8px;letter-spacing:1px;margin-left:5px;font-weight:800}
-#tape{height:74px;overflow:hidden;border:1px solid var(--line2);border-radius:var(--r);
+#tape{height:84px;overflow:hidden;border:1px solid var(--line2);border-radius:10px;
   font-family:var(--mono);font-size:10px;padding:5px 0}
 #tape .tr{display:flex;justify-content:space-between;padding:2.5px 10px;color:var(--mut)}
 #tape .tr .p{color:var(--txt)}#tape .tr .p.g{color:var(--green2)}#tape .tr .p.r{color:#FCA5A5}
 #tape .tr .y{color:#22D3EE;font-weight:700}
-#ordertabs{display:flex;gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-#ordertabs button{flex:1;padding:8px;font-size:11px;font-weight:700;letter-spacing:1px;color:var(--dim)}
-#ordertabs button.on{background:rgba(99,161,237,.12);color:var(--blue)}
-#oform{border:1px solid var(--line2);border-radius:var(--r);padding:12px}
+#ordertabs{display:flex;gap:4px;padding:3px;background:rgba(0,0,0,.25);border:1px solid var(--line2);border-radius:999px}
+#ordertabs button{flex:1;padding:7px;font-size:11px;font-weight:700;letter-spacing:1px;color:var(--dim);border-radius:999px}
+#ordertabs button.on{background:rgba(245,204,116,.16);color:#f5cc74}
+#oform{border:0;padding:0}
 #oform .fr{display:flex;gap:8px;margin-bottom:8px}
-#oform input{flex:1;background:#111827;border:1px solid var(--line);border-radius:3px;color:var(--txt);
-  font-family:var(--mono);font-size:12.5px;padding:8px 10px;outline:none;width:0}
-#oform input:focus{border-color:var(--accent)}
+#oform input{flex:1;background:rgba(0,0,0,.3);border:1px solid var(--line2);border-radius:10px;color:var(--txt);
+  font-family:var(--mono);font-size:14px;padding:10px 12px;outline:none;width:100%;box-sizing:border-box}
+#oform input:focus{border-color:rgba(245,204,116,.6)}
 #oform .lb{font-size:9px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;margin-bottom:4px}
 #oform .est{font-family:var(--mono);font-size:10.5px;color:var(--mut);margin:8px 0 10px;line-height:1.6}
 #oform .est b{color:var(--green2)}
-#oform .bb{display:flex;gap:8px}
-#oform .bb .btn{flex:1;padding:11px}
-#posline{font-family:var(--mono);font-size:10.5px;color:var(--mut);padding:8px 2px}
-#posline b{color:var(--blue)}
+#oform .bb{display:flex;gap:10px}
+#oform .bb .btn{flex:1;padding:13px;font-size:13px;letter-spacing:1.5px;border-radius:12px;border:0}
+#oform .bb .btn.good{background:#48BB78;color:#08210f}#oform .bb .btn.good:hover{background:#68D391}
+#oform .bb .btn.bad{background:#EF4444;color:#fff}#oform .bb .btn.bad:hover{background:#F87171}
+#posline{font-family:var(--mono);font-size:10.5px;color:var(--mut);padding:10px 2px 0}
+#posline b{color:#f5cc74}
 #openorders .oo{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);
   font-size:10.5px;color:var(--mut);padding:6px 4px;border-bottom:1px dashed rgba(255,255,255,.05)}
-#openorders .oo .c{color:#FCA5A5;cursor:pointer;padding:2px 7px;border:1px solid rgba(239,68,68,.3);
-  border-radius:3px;font-size:9px}
+#openorders .oo .c{color:#FCA5A5;cursor:pointer;padding:2px 9px;border:1px solid rgba(239,68,68,.3);
+  border-radius:999px;font-size:9px}
 #openorders .oo .c:hover{background:rgba(239,68,68,.12)}
-.msec{font-size:9px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;margin:2px 0 -2px}
+.msec{font-size:9.5px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;margin:0 0 8px;font-weight:700}
 
 /* ================= TOASTS ================= */
 #toasts{position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:90;display:flex;

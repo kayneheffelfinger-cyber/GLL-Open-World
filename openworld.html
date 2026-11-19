@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Open World — v2.71</title>
+<title>Open World — v2.72</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -82,24 +82,21 @@
 
 <!-- ================= MARKET PANEL ================= -->
 <div id="market">
-  <div class="mh2"><div class="t">OPEN EXCHANGE</div><button class="x" id="mx">✕</button></div>
+  <div class="mh2"><div class="t">OPEN EXCHANGE<span class="live"><i></i>LIVE</span></div><button class="x" id="mx">✕</button></div>
   <div class="body">
     <div id="comps"></div>
-    <div>
-      <div class="msec">Order Book</div>
-      <div id="book">
-        <div class="bh"><span>PRICE</span><span>SIZE</span><span>TOTAL</span></div>
-        <div id="bookrows"></div>
+    <div id="mquote">
+      <div class="mq-top">
+        <div><div class="mq-sym" id="mq-sym">HDG</div><div class="mq-name" id="mq-name">—</div></div>
+        <div class="mq-px"><div class="mq-price" id="mq-price">$0.00</div><div class="mq-chg" id="mq-chg">—</div></div>
       </div>
+      <canvas id="mchart"></canvas>
+      <div class="mq-hl"><span>LOW <b id="mq-lo">—</b></span><span>HIGH <b id="mq-hi">—</b></span></div>
     </div>
-    <div>
-      <div class="msec">Trade Tape</div>
-      <div id="tape"></div>
-    </div>
-    <div>
+    <div class="mcard">
       <div class="msec">Place Order</div>
       <div id="ordertabs"><button data-ot="limit" class="on">LIMIT</button><button data-ot="market">MARKET</button></div>
-      <div id="oform" style="margin-top:8px">
+      <div id="oform" style="margin-top:10px">
         <div id="of-limit">
           <div class="fr"><div style="flex:1"><div class="lb">Price $</div><input id="lmt-p" inputmode="decimal"></div>
           <div style="flex:1"><div class="lb">Qty</div><input id="lmt-q" inputmode="numeric"></div></div>
@@ -112,7 +109,18 @@
       </div>
       <div id="posline">HOLD —</div>
     </div>
-    <div id="openorders"><div class="msec">Open Orders</div><div id="oorows"></div></div>
+    <div class="mcard">
+      <div class="msec">Order Book</div>
+      <div id="book">
+        <div class="bh"><span>PRICE</span><span>SIZE</span><span>TOTAL</span></div>
+        <div id="bookrows"></div>
+      </div>
+    </div>
+    <div class="mcard">
+      <div class="msec">Trade Tape</div>
+      <div id="tape"></div>
+    </div>
+    <div id="openorders" class="mcard"><div class="msec">Open Orders</div><div id="oorows"></div></div>
   </div>
 </div>
 
@@ -125,7 +133,7 @@
 <div id="toasts"></div>
 <div id="veil"><div class="w">OPEN WORLD</div><div class="s" id="veils">—</div>
   <div class="bar"><i></i></div>
-  <div class="at">Map data © OpenStreetMap contributors (ODbL) · Coastlines &amp; lakes: Natural Earth (public domain)<br>Open World v2.71 — parcels: bright green plots with price pills, sand-gold lots, lane lines and flat-roof houses — plus dark glass towers, a moody tone and regional character (every city dresses like its part of the world, with real landmarks at their true spots), moving traffic, design-your-own buildings on buildable city lots, a muted low-poly picture with gold frames, graphics settings in the Help tab — the real Earth at 1:1, every city its own size and face — one connected road network, plots, carts, towers, mining, the Works, the exchange, machines and oil rigs. Buy the lot, draft the tower, site the build, trade the exchange.</div>
+  <div class="at">Map data © OpenStreetMap contributors (ODbL) · Coastlines &amp; lakes: Natural Earth (public domain)<br>Open World v2.72 — trading floor: the Open Exchange gets a live price chart, the order form up top and big BUY and SELL buttons — plus parcels (green plots with price pills, sand-gold lots), lane lines, flat-roof houses, dark glass towers, a moody tone and regional character (every city dresses like its part of the world, with real landmarks at their true spots), moving traffic, design-your-own buildings on buildable city lots, a muted low-poly picture with gold frames, graphics settings in the Help tab — the real Earth at 1:1, every city its own size and face — one connected road network, plots, carts, towers, mining, the Works, the exchange, machines and oil rigs. Buy the lot, draft the tower, site the build, trade the exchange.</div>
 </div>
 <div id="joy"><div class="base"></div><div class="nub" id="joynub"></div></div>
 

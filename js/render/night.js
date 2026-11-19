@@ -341,11 +341,11 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.71 — PARCELS', `
-    <p><b>Plots, lots and streets, redrawn.</b></p>
-    <div class="kv"><span class="k">PARCELS</span><span class="v">plots are bright green with a dark price pill; lots and owned ground turn sand-gold with a white house icon</span></div>
-    <div class="kv"><span class="k">LANE LINES</span><span class="v">wide avenues get white dashed lane dividers beside the yellow center</span></div>
-    <div class="kv"><span class="k">FLAT HOUSES</span><span class="v">Cairo, Athens, Dubai, Havana, Miami and the other flat-roof regions build flat-roofed houses with a parapet</span></div>
+  openModal('Welcome to v2.72 — TRADING FLOOR', `
+    <p><b>The Open Exchange, redrawn.</b></p>
+    <div class="kv"><span class="k">LIVE CHART</span><span class="v">every symbol gets a big price, change pill, high/low and a live line chart</span></div>
+    <div class="kv"><span class="k">ORDER FORM UP TOP</span><span class="v">place orders right under the chart — big BUY and SELL buttons, no scrolling</span></div>
+    <div class="kv"><span class="k">FIXED</span><span class="v">the order book's prices were invisible (text and background were the same color) — they read again</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }

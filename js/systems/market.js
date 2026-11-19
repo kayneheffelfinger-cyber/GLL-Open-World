@@ -40,7 +40,18 @@ export const MARKET = (() => {
     if (books[sym]) return books[sym];
     const c = COMMODITIES.find(x => x.sym === sym);
     const seed = hashStr(sym);
-    const b = { asks: [], bids: [], last: c.base, prevLast: c.base, open: c.base };
+    const b = { asks: [], bids: [], last: c.base, prevLast: c.base, open: c.base, hist: [] };
+    // v2.72 CHART: a deterministic mean-reverting back-fill (72 points ending
+    // on the base price) so the chart opens with a believable recent past;
+    // live ticks append to it. History is scenery, never saved.
+    {
+      let p = c.base * (1 + (h32(seed, 5, 3) - .5) * .06);
+      for (let i = 0; i < 72; i++) {
+        p += (c.base - p) * .06 + (h32(seed + i, 9, 17) - .5) * c.base * .012;
+        b.hist.push(+Math.max(.05, p).toFixed(2));
+      }
+      b.hist[71] = c.base;
+    }
     for (let i = 0; i < 6; i++) {
       b.asks.push({ p: +(c.base * (1.012 + i * .011)).toFixed(2), s: Math.round(60 + h32(seed + i, 3, 11) * 340) });
       b.bids.push({ p: +(c.base * (0.988 - i * .011)).toFixed(2), s: Math.round(60 + h32(seed + i, 7, 29) * 340) });
@@ -57,6 +68,7 @@ export const MARKET = (() => {
       const pull = (c.base - b.last) * 0.06;
       b.prevLast = b.last;
       b.last = Math.max(.05, +(b.last + pull + (Math.random() - .5) * c.base * .012).toFixed(2));
+      b.hist.push(b.last); if (b.hist.length > 90) b.hist.shift();   // v2.72 CHART
       // sizes drift: asks drain, bids stack (then occasionally refresh)
       for (const a of b.asks) a.s = Math.max(4, a.s - Math.round(Math.random() * 9));
       for (const bd of b.bids) bd.s = bd.s + Math.round(Math.random() * 8);
@@ -203,11 +215,44 @@ export const MARKET = (() => {
   // ---------------- rendering ----------------------------------------
   const $ = id => document.getElementById(id);
 
+  // v2.72 QUOTE + CHART: big price, change pill, high/low and a line chart of
+  // the selected symbol (canvas, DPR-aware, redrawn on every render)
+  function renderQuote() {
+    const c = COMMODITIES.find(x => x.sym === active), b = ensureBook(active);
+    if (!c || !$('mchart')) return;
+    const chg = (b.last - b.open) / b.open * 100, up = chg >= 0;
+    $('mq-sym').textContent = c.sym;
+    $('mq-name').textContent = c.name;
+    $('mq-price').textContent = '$' + b.last.toFixed(2);
+    const ce = $('mq-chg'); ce.textContent = (up ? '▲ ' : '▼ ') + Math.abs(chg).toFixed(2) + '%'; ce.className = 'mq-chg ' + (up ? 'up' : 'dn');
+    const hs = b.hist, lo = Math.min(...hs), hi = Math.max(...hs);
+    $('mq-lo').textContent = '$' + lo.toFixed(2); $('mq-hi').textContent = '$' + hi.toFixed(2);
+    // chart
+    const cv = $('mchart'), dpr = Math.min(2, window.devicePixelRatio || 1);
+    const W = cv.clientWidth || 340, H = cv.clientHeight || 110;
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+    const pad = 6, span = Math.max(hi - lo, b.last * .004), y0 = lo - span * .12, y1 = hi + span * .12;
+    const X = i => pad + (W - pad * 2) * i / (hs.length - 1), Y = v => H - pad - (H - pad * 2) * (v - y0) / (y1 - y0);
+    g.strokeStyle = 'rgba(255,255,255,.05)'; g.lineWidth = 1;
+    for (let k = 1; k < 4; k++) { const y = Math.round(H * k / 4) + .5; g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+    const col = up ? '104,211,145' : '239,68,68';
+    const grad = g.createLinearGradient(0, 0, 0, H); grad.addColorStop(0, `rgba(${col},.30)`); grad.addColorStop(1, `rgba(${col},0)`);
+    g.beginPath(); hs.forEach((v, i) => i ? g.lineTo(X(i), Y(v)) : g.moveTo(X(i), Y(v)));
+    g.lineTo(X(hs.length - 1), H); g.lineTo(X(0), H); g.closePath(); g.fillStyle = grad; g.fill();
+    g.beginPath(); hs.forEach((v, i) => i ? g.lineTo(X(i), Y(v)) : g.moveTo(X(i), Y(v)));
+    g.strokeStyle = `rgb(${col})`; g.lineWidth = 2; g.lineJoin = 'round'; g.stroke();
+    const ly = Y(b.last);   // last-price guide + dot
+    g.setLineDash([3, 4]); g.strokeStyle = `rgba(${col},.5)`; g.lineWidth = 1; g.beginPath(); g.moveTo(0, ly); g.lineTo(W, ly); g.stroke(); g.setLineDash([]);
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(X(hs.length - 1), ly, 3.2, 0, 6.2832); g.fill();
+    g.strokeStyle = `rgb(${col})`; g.lineWidth = 2; g.stroke();
+  }
+
   function renderComps() {
     $('comps').innerHTML = COMMODITIES.map(c => {
       const b = ensureBook(c.sym);
       const chg = ((b.last - b.open) / b.open * 100);
-      return `<div class="comp ${c.sym === active ? 'on' : ''}" data-sym="${c.sym}">${c.sym}<span class="pp">$${b.last.toFixed(2)} <span style="color:${chg >= 0 ? 'var(--bull)' : 'var(--red)'}">${chg >= 0 ? '▲' : '▼'}${Math.abs(chg).toFixed(1)}%</span></span></div>`;
+      return `<div class="comp ${c.sym === active ? 'on' : ''}" data-sym="${c.sym}"><span class="cs">${c.sym}</span><span class="pp">$${b.last.toFixed(2)}</span><span class="cc ${chg >= 0 ? 'up' : 'dn'}">${chg >= 0 ? '▲' : '▼'}${Math.abs(chg).toFixed(1)}%</span></div>`;
     }).join('');
     document.querySelectorAll('.comp').forEach(el => {
       el.onclick = () => { active = el.dataset.sym; render(); };
@@ -279,6 +324,7 @@ export const MARKET = (() => {
   let mode = 'limit';
   function render() {
     renderComps();
+    renderQuote();
     renderBook();
     estPreview();
   }
