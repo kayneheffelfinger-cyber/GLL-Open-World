@@ -341,10 +341,11 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.70 — DARK GLASS', `
-    <p><b>Downtown goes charcoal.</b></p>
-    <div class="kv"><span class="k">DARK GLASS</span><span class="v">most towers over 26 m are now deep charcoal curtain-wall glass — the glassier the city, the more of them</span></div>
-    <div class="kv"><span class="k">MOODY TONE</span><span class="v">a warmer sun and a lower sky fill give deeper shadows — switch back to CLASSIC in Help → GRAPHICS</span></div>
+  openModal('Welcome to v2.71 — PARCELS', `
+    <p><b>Plots, lots and streets, redrawn.</b></p>
+    <div class="kv"><span class="k">PARCELS</span><span class="v">plots are bright green with a dark price pill; lots and owned ground turn sand-gold with a white house icon</span></div>
+    <div class="kv"><span class="k">LANE LINES</span><span class="v">wide avenues get white dashed lane dividers beside the yellow center</span></div>
+    <div class="kv"><span class="k">FLAT HOUSES</span><span class="v">Cairo, Athens, Dubai, Havana, Miami and the other flat-roof regions build flat-roofed houses with a parapet</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }
