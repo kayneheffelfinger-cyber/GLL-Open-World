@@ -24,6 +24,7 @@ export const STATE = {
   mat: { Wood: 0, Stone: 0, Steel: 0, Glass: 0 },   // v2.56 GROUND UP: the materials shed — tonnes of wood/stone/steel/glass for construction
   pow: { g: { m: 1, pm: 1 }, b: {} },   // v2.59 THE GRID: the power state — grid price multiplier {m, pm} + per-business meters {plotId: {m, cut, due}}
   gen: { sell: 1, t: 12, sold: 0, units: [], out: null },   // v2.75 OWN POWER: your generators {sell switch, game clock hours, $ sold to the grid, units [{id,t,x,z,on,sea,price,spot,burnt,dry}]}
+  co: { pend: {}, seq: {}, claimed: [] },   // v2.77 COMPANIES (inert until the server supports them): company income held for the next bank report, report sequence numbers, wallet payouts already credited, an unanswered income batch
   gfx: { shadows: true, trees: true, scale: 1, lite: false, tone: 'moody' },   // v2.66 PICTURE: the graphics levers behind the Help tab's GRAPHICS button — saved with the world
   designs: [],                   // v2.67 THE ARCHITECT: your drafted buildings {name, w, d, h, floors, style, mat, days, inc, val} — placed buildings save t = 100 + index
   market: null,                  // MARKET module state (positions/orders)

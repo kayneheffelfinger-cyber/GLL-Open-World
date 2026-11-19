@@ -338,7 +338,7 @@ export const ECO = (() => {
     const item = pickMenuItem(cart.cuisine);
     const tip = ECON.serveTipMin + Math.random() * (ECON.serveTipMax - ECON.serveTipMin);
     const gross = item[1] + tip;
-    earn(gross);
+    if (!(window.CO && CO.divert(cart.plot, gross))) earn(gross);   // v2.77 COMPANIES: a business under your company pays the shared bank (CO.divert holds it for the next report); otherwise straight to your cash
     cart.served++;
     // v2.05 starter guide: signal a successful MANUAL serve (E / SERVE btn)
     if (manual) window.dispatchEvent(new CustomEvent('ow:tut-serve'));

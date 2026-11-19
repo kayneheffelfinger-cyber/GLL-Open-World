@@ -15,6 +15,8 @@ let hosted = false, stopped = false, user = '', rev = 0;
 let timer = 0, busy = false, seq = 0, listening = false;
 
 export const isHosted = () => hosted;
+export const accountName = () => user;                              // GLL ID name while signed in on the hosted site (companies.js reads it)
+export const syncRev = () => rev;                                      // last server save revision this tab knows
 export const __test = { setFlushMs: (n) => { FLUSH_MS = n; } };
 
 const meta = () => { try { return JSON.parse(localStorage.getItem(META) || '{}'); } catch { return {}; } };
@@ -93,6 +95,12 @@ export function onSaved() {
   seq++;
   setMeta({ user, rev, dirty: true });
   schedule();
+}
+// Upload the save right now (companies.js uses it before a wallet deposit is confirmed). Resolves true when the server has the latest save.
+export async function flushNow() {
+  if (!hosted || stopped) return false;
+  await flush();
+  return !stopped && !meta().dirty;
 }
 const schedule = () => { if (!timer) timer = setTimeout(() => flush(), FLUSH_MS); };
 

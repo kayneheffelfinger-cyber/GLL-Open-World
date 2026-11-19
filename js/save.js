@@ -148,6 +148,20 @@ export function loadGame() {
             price: Math.min(1e7, Math.max(0, +u.price || 0)), spot: 0, burnt: Math.min(1e9, Math.max(0, +u.burnt || 0)), dry: 0, run: 0 })),
       };
     }
+    // v2.77 COMPANIES: held company income + payout bookkeeping (absent on older saves — empty)
+    {
+      const __c = (p.co && typeof p.co === 'object') ? p.co : {}, __n = v => (isFinite(+v) && +v > 0) ? Math.min(1e9, Math.round(+v * 100) / 100) : 0;
+      const co = { pend: {}, seq: {}, claimed: [] };
+      for (const k of Object.keys(__c.pend || {}).slice(0, 200)) { const v = __n(__c.pend[k]); if (v > 0 && k.length <= 40) co.pend[k] = v; }
+      for (const k of Object.keys(__c.seq || {}).slice(0, 200)) { const v = (+__c.seq[k]) | 0; if (v > 0 && k.length <= 40) co.seq[k] = Math.min(1e9, v); }
+      co.claimed = (Array.isArray(__c.claimed) ? __c.claimed : []).filter(x => typeof x === 'string' && x.length <= 64).slice(-200);
+      const f = __c.inflight;
+      if (f && typeof f === 'object' && typeof f.batchId === 'string' && typeof f.companyId === 'string' && Array.isArray(f.reports)) {
+        const reports = f.reports.slice(0, 200).filter(x => x && typeof x.bizId === 'string' && __n(x.amount) > 0).map(x => ({ bizId: x.bizId.slice(0, 40), seq: Math.max(1, (+x.seq) | 0), amount: __n(x.amount), periodMs: 20000 }));
+        if (reports.length) co.inflight = { batchId: f.batchId.slice(0, 64), companyId: f.companyId.slice(0, 64), reports };
+      }
+      STATE.co = co;
+    }
     // v2.62 DEEP WATER: the offshore oil rigs (absent on older saves — none built)
     STATE.rigs = (p.rigs || []).filter(r => r && typeof r.id === 'string' && r.id.charAt(0) === 'r' && isFinite(+r.x) && isFinite(+r.z) && +r.ore > 0)
       .slice(0, 8)
@@ -212,6 +226,7 @@ export function saveGame() {
       pow: (() => { const s = STATE.pow || {}, g = s.g || {}; const o = { g: { m: +(g.m || 1).toFixed(3), pm: +(g.pm || 1).toFixed(3) }, b: {} }; for (const k in (s.b || {})) { const e = s.b[k]; if (e && typeof e === 'object' && (isFinite(+e.m) || e.cut || isFinite(+e.due))) o.b[k] = { m: +Math.min(1e6, Math.max(0, +e.m || 0)).toFixed(1), cut: e.cut ? 1 : 0, due: +Math.min(1e6, Math.max(0, +e.due || 0)).toFixed(2) }; } return o; })(),   // v2.59 THE GRID (optional field — older builds ignore it)
       rigs: (STATE.rigs || []).map(r => ({ id: r.id, name: r.name, x: +r.x || 0, z: +r.z || 0, price: +r.price || 0, ore: Math.round(+r.ore || 0), got: +(+r.got || 0).toFixed(1), crew: r.crew | 0, walked: !!r.walked, wageAcc: +(+r.wageAcc || 0).toFixed(2), sto: +(+r.sto || 0).toFixed(1), near: r.near || null, nearKey: r.nearKey || null })),   // v2.62 DEEP WATER (optional field — older builds ignore it)
       gen: (() => { const g = STATE.gen || {}; return { sell: g.sell === 0 ? 0 : 1, t: +(+g.t || 0).toFixed(2), sold: +(+g.sold || 0).toFixed(2), black: (g.black | 0), units: (g.units || []).slice(0, 24).map(u => ({ id: u.id, t: u.t, x: Math.round(+u.x || 0), z: Math.round(+u.z || 0), on: u.on ? 1 : 0, sea: u.sea ? 1 : 0, price: Math.round(+u.price || 0), burnt: +(+u.burnt || 0).toFixed(1) })) }; })(),   // v2.75 OWN POWER (optional field — older builds ignore it)
+      co: (() => { const c = STATE.co || {}; const o = { pend: {}, seq: c.seq || {}, claimed: (c.claimed || []).slice(-200) }; for (const k in (c.pend || {})) if (+c.pend[k] > 0) o.pend[k] = +(+c.pend[k]).toFixed(2); if (c.inflight) o.inflight = c.inflight; return o; })(),   // v2.77 COMPANIES (optional field — older builds ignore it)
       gfx: STATE.gfx ? { sh: STATE.gfx.shadows === false ? 0 : 1, tr: STATE.gfx.trees === false ? 0 : 1, sc: STATE.gfx.scale === .75 || STATE.gfx.scale === .5 ? STATE.gfx.scale : 1, lt: STATE.gfx.lite ? 1 : 0, tn: STATE.gfx.tone === 'classic' ? 0 : 1 } : null,   // v2.66 PICTURE (optional field — older builds ignore it)
       dsg: (STATE.designs || []).slice(0, 12).map(d => ({ n: d.name, w: +d.w || 10, d: +d.d || 8, f: d.floors | 0, s: d.style || 'brick' })),   // v2.67 THE ARCHITECT (optional field — older builds ignore it; cost/days/income re-derive on load, so a balance tweak in a later build re-prices old designs honestly)
       market: STATE.market ? STATE.market.pack() : null,
