@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { ECON } from '../config.js';
 import { _ihash, _mulberry, _polyArea, hashStr, cityDNA } from '../util.js';
+import { suburbRoads } from '../suburbs.js';   // v2.73
 import { LANDGEO } from '../core.js';
 import { WORLD } from '../world/world.js';
 import { STATE } from '../state.js';   // v2.66 PICTURE: the DETAIL lever — LITE reads the saved gfx pack at build time
@@ -2031,48 +2032,11 @@ export const CITY = (() => {
   const SUB_TREES = ['Maple', 'Oak', 'Cedar', 'Elm', 'Pine', 'Birch', 'Willow', 'Aspen', 'Rowan', 'Poplar', 'Hawthorn', 'Juniper'];
   const SUB_KINDS = ['Lane', 'Street', 'Drive', 'Court', 'Way', 'Terrace', 'Circle', 'Road'];
 
+  // v2.73 NEIGHBORHOODS REDRAWN: the concentric rings + radial spokes
+  // are gone — js/suburbs.js lays a street pattern per region (grid,
+  // winding, lattice, superblock) inside a ragged per-city outline.
   function addSuburbRoads(meta, ax, az) {
-    const dna = cityDNA(meta);
-    const rnd = _mulberry(hashStr('sub' + (meta.key || meta.name)));
-    const out = [];
-    const rot = rnd() * 6.2832;                    // the whole ring turns per city
-    // collector rings (cls 2): polygonal circles, a point every ≤44 m,
-    // radii wobbling ±18 m so no ring ever reads as a perfect circle.
-    // v2.65 CITY DNA: the COUNT and REACH are the city's own — a small
-    // town loops 4–5 tight rings inside ~1.5 km, a metro lays up to 8
-    // out past 3 km. Ring 0 stays pinned at 880 m (the accepted downtown
-    // verge — it never creeps onto the plate), and the last ring lands
-    // 80 m inside the suburb edge, exactly the v2.64 2280/2360 pair
-    // whenever sub = 1, rings = 6.
-    const R0 = 880, R1 = Math.max(R0 + 180, dna.subR1 - 80);
-    for (let i = 0; i < dna.rings; i++) {
-      const fr = dna.rings > 1 ? i / (dna.rings - 1) : 0;
-      const r = R0 + fr * (R1 - R0) + (rnd() - .5) * 70;
-      const n = Math.max(48, Math.ceil(6.2832 * r / 44));
-      const a0 = rot + i * .22, pts = [];
-      for (let k = 0; k <= n; k++) {
-        const a = a0 + k / n * 6.2832;
-        const rr = r + Math.sin(a * 3 + i * 1.7) * 18;
-        pts.push([ax + Math.cos(a) * rr, az + Math.sin(a) * rr]);
-      }
-      out.push({ pts, w: 11.5, cls: 2, sub: 1,
-        name: (i + 1) + ' ' + SUB_TREES[Math.floor(rnd() * SUB_TREES.length)] + ' Ring' });
-    }
-    // radial lanes (cls 1), each with its own gentle bow — count and
-    // reach from the DNA (was a flat sixteen)
-    for (let i = 0; i < dna.radials; i++) {
-      const a = rot + i / dna.radials * 6.2832 + (rnd() - .5) * .06;
-      const bow = (rnd() - .5) * 70;
-      const pts = [];
-      for (let k = 0; k <= 10; k++) {
-        const t = k / 10, r = SUB_R0 + t * (dna.subR1 - SUB_R0);
-        const aa = a + Math.sin(t * 3.1416) * (bow / Math.max(r, 1));
-        pts.push([ax + Math.cos(aa) * r, az + Math.sin(aa) * r]);
-      }
-      out.push({ pts, w: 8.5, cls: 1, sub: 1,
-        name: SUB_TREES[Math.floor(rnd() * SUB_TREES.length)] + ' ' + SUB_KINDS[Math.floor(rnd() * SUB_KINDS.length)] });
-    }
-    return out;
+    return suburbRoads(meta, ax, az);
   }
 
   // ---------- v2.63 ONE NETWORK: every road reaches every other -------

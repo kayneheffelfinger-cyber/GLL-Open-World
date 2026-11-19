@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { CITIES, DEG_M, ECON, WORLD_BOUNDS, WORLD_CONTS } from '../config.js';
 import { _mulberry, hashStr, worldAnchorOf, cityDNA } from '../util.js';
+import { outlineR } from '../suburbs.js';   // v2.73 ragged suburb edge
 import { STATE } from '../state.js';
 import { LANDGEO, WORLD_EDGES } from '../core.js';
 import { OSM } from '../world/osm.js';
@@ -1062,15 +1063,14 @@ export const WORLD = (() => {
       // v2.65 CITY DNA: the lawn ring runs to the city's OWN suburb edge
       const R0 = CITY_R + 120, R1 = subEdge(c), BANDS = 7, SECT = 44;
       const greens = [0x7cb45e, 0x8ec96a, 0x74b056, 0x86c262];
-      const step = (R1 - R0) / BANDS;
       for (let i = 0; i < BANDS; i++) {
-        const r0 = R0 + i * step, r1 = r0 + step;
         for (let j = 0; j < SECT; j++) {
           const a0 = (j / SECT) * 6.2832 + (i % 2) * .07, a1 = ((j + 1) / SECT) * 6.2832 + (i % 2) * .07;
           const hv = hashStr(c.key + '/s' + i + '/' + j);
-          const jr0 = r0 + (hv % 90) - 45, jr1 = r1 + (Math.floor(hv / 90) % 90) - 45;
-          if (jr1 - jr0 < 40) continue;
-          const P = [[jr0, a0], [jr1, a0], [jr1, a1], [jr0, a1]].map(([r, a]) => [Math.cos(a) * r, Math.sin(a) * r]);
+          // v2.73: each corner's outer reach is the city's OWN ragged outline
+          const E0 = Math.min(R1, outlineR(c, a0)), E1 = Math.min(R1, outlineR(c, a1));
+          const rad = (E, k) => R0 + (E - R0) * k / BANDS;
+          const P = [[rad(E0, i), a0], [rad(E0, i + 1), a0], [rad(E1, i + 1), a1], [rad(E1, i), a1]].map(([r, a]) => [Math.cos(a) * r, Math.sin(a) * r]);
           if (LANDGEO.isWaterWorld(c.wx + (P[0][0] + P[2][0]) / 2, c.wz + (P[0][1] + P[2][1]) / 2) ||
               LANDGEO.isWaterWorld(c.wx + P[0][0], c.wz + P[0][1]) ||
               LANDGEO.isWaterWorld(c.wx + P[1][0], c.wz + P[1][1]) ||

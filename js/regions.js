@@ -31,6 +31,7 @@
 export const REGIONS = {
   // brick, stone and steel: the old-money US/Canada core
   nastern: {
+    layout: 'grid',   // v2.73 suburb street pattern (js/suburbs.js)
     warm: [0x9c4a3c, 0xa05252, 0xb5654f, 0x8a6f58, 0xcfb37f, 0xd8c9a8, 0xc8beac, 0xb08d76, 0xe0dcd4],
     cool: [0x8e99a6, 0x6e7b86, 0x9a9c9e, 0x4f4f52, 0xb5bdc2, 0x7f8fa0, 0xa8b4c2],
     shingles: [0x46505c, 0x3d4043, 0x6b4a33, 0x55603f],
@@ -38,6 +39,7 @@ export const REGIONS = {
   },
   // stucco, glass and sun: the sprawl cities of the west and south
   nawest: {
+    layout: 'winding',   // v2.73 suburb street pattern (js/suburbs.js)
     warm: [0xf2e6d0, 0xe8d8b8, 0xe6c9a8, 0xd9b8a3, 0xf0e0c8, 0xd8b878, 0xc4907f],
     cool: [0x7f8fa0, 0x8496a8, 0xa8b4c2, 0x5c6b7a, 0xb5bdc2, 0xe1e3e6],
     shingles: [0x9c4a3c, 0x7a4638, 0x6b4a33, 0x46505c],
@@ -45,6 +47,7 @@ export const REGIONS = {
   },
   // colorful stucco, terracotta tile, dense hillsides
   latin: {
+    layout: 'lattice',   // v2.73 suburb street pattern (js/suburbs.js)
     warm: [0xe3a05a, 0xd9776a, 0xe8c46a, 0x7fb5a5, 0x8aa7cf, 0xc88fb0, 0xf0e0c0, 0xd8a087, 0xc2766b, 0xb76b5e],
     cool: [0xa8b4c2, 0x8e99a6, 0xcfd6c8, 0x9a9c9e],
     shingles: [0xb5523a, 0x9c4a3c, 0xc2766b, 0x7a4638],
@@ -52,6 +55,7 @@ export const REGIONS = {
   },
   // ochre, terracotta and cream under low clay-tile roofs
   med: {
+    layout: 'lattice',   // v2.73 suburb street pattern (js/suburbs.js)
     warm: [0xd9a066, 0xc98a5a, 0xe0c08a, 0xcd9488, 0xf2e6d0, 0xe8dcc0, 0xd8b890, 0xc4907f],
     cool: [0xcfc6b2, 0xb5b0a0, 0xe0dcd4],
     shingles: [0xb5523a, 0xc2663f, 0x9c4a3c, 0x8a4a38],
@@ -59,6 +63,7 @@ export const REGIONS = {
   },
   // cream limestone under grey zinc mansards
   weurope: {
+    layout: 'lattice',   // v2.73 suburb street pattern (js/suburbs.js)
     warm: [0xeee3c8, 0xe8dcc0, 0xe0d3b4, 0xd8c8a4, 0xf2ead0, 0xcfc2a8, 0xc8beac],
     cool: [0x9aa2a8, 0xb5bdc2, 0x8e99a6, 0x6e7b86, 0xe1e3e6],
     shingles: [0x5a6068, 0x46505c, 0x3d4043, 0x6b6f72],
@@ -66,6 +71,7 @@ export const REGIONS = {
   },
   // dark brick, slate roofs, painted fronts in the cold north
   nweurope: {
+    layout: 'winding',   // v2.73 suburb street pattern (js/suburbs.js)
     warm: [0x9c4a3c, 0x8a4a3a, 0xa05252, 0xb08d76, 0x7a5c48, 0xcfb37f, 0xe8c46a, 0xc2766b, 0xd8a087],
     cool: [0x6e7b86, 0x8e99a6, 0x9aa2a8, 0x4f4f52],
     shingles: [0x46505c, 0x3d4043, 0x6b4a33, 0x39424a],
@@ -73,6 +79,7 @@ export const REGIONS = {
   },
   // Soviet slab blocks and pastel baroque
   ee: {
+    layout: 'superblock',   // v2.73 suburb street pattern (js/suburbs.js)
     warm: [0xd9c9a8, 0xcfc2a8, 0xc8beac, 0xb8a890, 0xe8dcc0, 0x9db5a0, 0xd8c8a4],
     cool: [0x9a9c9e, 0x8e99a6, 0xb5b5b0, 0x7f8a86, 0x6e7b86],
     shingles: [0x55603f, 0x6b4a33, 0x3d4043, 0x7a4638],
@@ -80,6 +87,7 @@ export const REGIONS = {
   },
   // sand, limestone and whitewash under flat roofs
   mena: {
+    layout: 'lattice',   // v2.73 suburb street pattern (js/suburbs.js)
     warm: [0xd9c29a, 0xcfb37f, 0xe0cfa8, 0xc8a878, 0xe8dcc0, 0xd8b890, 0xc4a070],
     cool: [0xb5b0a0, 0xc8beac, 0xd8d4c8],
     shingles: [0xb5523a, 0x9c6a4a, 0x8a4a38],
@@ -87,6 +95,7 @@ export const REGIONS = {
   },
   // the Gulf: glass supertowers rising out of the sand
   gulf: {
+    layout: 'superblock',   // v2.73 suburb street pattern (js/suburbs.js)
     warm: [0xe0cfa8, 0xd9c29a, 0xe8dcc0],
     cool: [0x8fb4d0, 0x6e8fae, 0xa8c4d8, 0x5c7a96, 0x7f8fa0, 0xb5cfe0],
     shingles: [0x9c6a4a, 0x8a4a38],
@@ -94,6 +103,7 @@ export const REGIONS = {
   },
   // concrete, corrugated rust and bright paint
   africa: {
+    layout: 'lattice',   // v2.73 suburb street pattern (js/suburbs.js)
     warm: [0xd9b8a3, 0xcfb37f, 0xc4907f, 0xe0dcd4, 0x9db5a0, 0xb76b5e, 0xe8c46a],
     cool: [0x9a9c9e, 0xb5b0a0, 0x8e99a6],
     shingles: [0x8a4a38, 0x7a7f84, 0x9c6a4a, 0x6b6f72],
@@ -101,6 +111,7 @@ export const REGIONS = {
   },
   // grey-white tile, slender glass towers, wall-to-wall density
   eastasia: {
+    layout: 'superblock',   // v2.73 suburb street pattern (js/suburbs.js)
     warm: [0xe1ddd4, 0xd8d4c8, 0xcfc8b8, 0xc8beac, 0xe8dcc0],
     cool: [0xe1e3e6, 0xb5bdc2, 0x9aa2a8, 0x8e99a6, 0x7f8fa0, 0x6e7b86],
     shingles: [0x46505c, 0x3d4043, 0x55606b],
@@ -108,6 +119,7 @@ export const REGIONS = {
   },
   // tropical: bright paint, tin and tile, towers with greenery
   seasia: {
+    layout: 'lattice',   // v2.73 suburb street pattern (js/suburbs.js)
     warm: [0xe3b08a, 0xd9776a, 0xe8c46a, 0xcfb37f, 0x9db5a0, 0xc88fb0, 0xd8a087, 0xf0e0c0],
     cool: [0x8e99a6, 0x9a9c9e, 0xa8b4c2, 0xe1e3e6],
     shingles: [0xb5523a, 0x8a4a38, 0x7a7f84, 0x9c4a3c],
@@ -115,6 +127,7 @@ export const REGIONS = {
   },
   // red-brick suburbs under terracotta, glass downtowns
   oceania: {
+    layout: 'grid',   // v2.73 suburb street pattern (js/suburbs.js)
     warm: [0xb5654f, 0xc4907f, 0xe8dcc0, 0xd9b8a3, 0xcfb37f, 0xf0e0c8],
     cool: [0x7f8fa0, 0x8496a8, 0xa8b4c2, 0xb5bdc2],
     shingles: [0xb5523a, 0x7a4638, 0x6b4a33, 0x46505c],

@@ -341,11 +341,10 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.72 — TRADING FLOOR', `
-    <p><b>The Open Exchange, redrawn.</b></p>
-    <div class="kv"><span class="k">LIVE CHART</span><span class="v">every symbol gets a big price, change pill, high/low and a live line chart</span></div>
-    <div class="kv"><span class="k">ORDER FORM UP TOP</span><span class="v">place orders right under the chart — big BUY and SELL buttons, no scrolling</span></div>
-    <div class="kv"><span class="k">FIXED</span><span class="v">the order book's prices were invisible (text and background were the same color) — they read again</span></div>
+  openModal('Welcome to v2.73 — NEIGHBORHOODS REDRAWN', `
+    <p><b>The round suburbs are gone.</b></p>
+    <div class="kv"><span class="k">STREET PATTERNS</span><span class="v">each region lays its own: gridiron, winding cul-de-sacs, a bent small-block lattice, or superblocks with comb stubs</span></div>
+    <div class="kv"><span class="k">RAGGED EDGE</span><span class="v">every city's suburbs end on their own irregular outline, and the lawn follows it</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }
