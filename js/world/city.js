@@ -909,6 +909,11 @@ export const CITY = (() => {
       const deckC = jit(colOf(deckPool[(Math.floor(srnd() * deckPool.length) + dna.palOff) % deckPool.length]), .8 + srnd() * .14);
       const rimC = jit(colOf(TRIMS[(Math.floor(srnd() * TRIMS.length) + dna.palOff) % TRIMS.length]), .9 + srnd() * .2);
       const trimC = jit(rimC, 1.1);
+      // v2.77 DYNAMIC SKYLINE: every extra roll below is its own hash of the
+      // building key, so the per-building sequences above are untouched.
+      const vr = _mulberry(hashStr('v' + b.bkey));
+      let deckC2 = deckC;
+      if (h >= 12 && h < 30 && !(reg && reg.decks) && vr() < .28) deckC2 = jit(colOf(ROOF_DECKS[3 + Math.floor(vr() * (ROOF_DECKS.length - 3))]), .85 + vr() * .14);   // an accent deck (tar-red, gravel, concrete)
       const SHN = reg && reg.shingles ? reg.shingles : SHINGLES;
       const shinC = jit(colOf(SHN[(Math.floor(srnd() * SHN.length) + dna.palOff) % SHN.length]), .9 + srnd() * .2);
       // ---- silhouette roll ----
@@ -919,6 +924,8 @@ export const CITY = (() => {
       const flatRoof = !!(reg && reg.flat && _mulberry(hashStr('f' + b.bkey))() < reg.flat);
       const isPitched = !flatRoof && !!(obb && obb.area && area / obb.area >= .78 && Math.min(obb.Lu, obb.Lv) >= 3.6);
       const tiered = h >= 40 && area >= 900 && srnd() < .55;
+      // v2.77: a mid-rise setback — the upper block steps in and slides to one side
+      const stepped = !tiered && h >= 20 && h < 44 && area >= 260 && p.length <= 12 && !isPitched && vr() < .34;
       if (tintsUsed.length < 60) tintsUsed.push(hexOf(tint) + (isPitched ? ' p' : tiered ? ' t' : ''));
       if (roofsUsed.length < 60) roofsUsed.push(hexOf(isPitched ? shinC : deckC));
       // ---- build ----
@@ -934,6 +941,19 @@ export const CITY = (() => {
         roofDeck(p2, .15 + h, deckC);
         parapet(p2, .15 + h, rimC, jit(deckC, 1.1));
         clutter(p2, area * .46, .15 + h);
+      } else if (stepped) {                             // v2.77 stepped mid-rise + terrace
+        const h1 = h * (.55 + vr() * .15), k = .72 + vr() * .08;
+        let minR = 1e9; for (const v of p) minR = Math.min(minR, Math.hypot(v[0] - cx, v[1] - cz));
+        const sa = vr() * 6.28, sh = minR * (1 - k) * .8;
+        const p2 = p.map(v => [cx + Math.cos(sa) * sh + (v[0] - cx) * k, cz + Math.sin(sa) * sh + (v[1] - cz) * k]);
+        if (_polyArea(p2) < 0) p2.reverse();
+        wallBand(p, y0, .15 + h1, tint, style, uOff, vOff, shopTint);
+        wallBand(p2, .15 + h1, .15 + h, tint, style, uOff + 5, vOff + 1, null);
+        roofDeck(p, .15 + h1, jit(deckC2, 1.18));         // the terrace reads lighter than the crown deck
+        parapet(p, .15 + h1, rimC, jit(deckC2, 1.25));
+        roofDeck(p2, .15 + h, deckC2);
+        if (vr() < .5) parapet(p2, .15 + h, rimC, jit(deckC2, 1.1)); else cornice(p2, .15 + h, trimC);
+        clutter(p2, area * .5, .15 + h);
       } else {
         wallBand(p, y0, .15 + h, tint, style, uOff, vOff, shopTint);
         if (isPitched) {                                // pitched roof + dormers + chimney
@@ -941,9 +961,27 @@ export const CITY = (() => {
           L.col = jit(colOf(0x5cb85a), .9 + srnd() * .18);
           pitchedRects.push(L);
         } else {                                        // flat roof finish
-          roofDeck(p, .15 + h, deckC);
-          if (h >= 40) parapet(p, .15 + h, rimC, jit(deckC, 1.1));
+          roofDeck(p, .15 + h, deckC2);
+          if (h >= 40 || (h >= 12 && vr() < .3)) parapet(p, .15 + h, rimC, jit(deckC2, 1.1));   // v2.77: some mid-rises take a parapet too
           else if (h > 7) cornice(p, .15 + h, trimC);
+          // v2.77 green roof: an inset garden deck on some low/mid-rise roofs
+          if (h < 26 && area >= 200 && vr() < .12) {
+            const g = p.map(v => [cx + (v[0] - cx) * .78, cz + (v[1] - cz) * .78]);
+            if (_polyArea(g) < 0) g.reverse();
+            roofDeck(g, .15 + h + .04, jit(colOf(0x5f8f4e), .88 + vr() * .22));
+          }
+          // v2.77 crowns: towers that are not THE tallest get a mechanical
+          // penthouse or a mast, so the skyline stops being flat-topped boxes
+          if (h >= 40 && area >= 300) {
+            const cr = vr();
+            const rr2 = Math.max(2.2, Math.sqrt(area / Math.PI) * (.26 + vr() * .12));
+            if (cr < .4) {
+              boxInto(trim, cx, cz, .15 + h, .15 + h + 3.4 + vr() * 3.6, rr2, rr2 * (.7 + vr() * .3), jit(tint, .86));
+            } else if (cr < .62) {
+              boxInto(trim, cx, cz, .15 + h, .15 + h + 5 + vr() * 6, .3, .3, jit(colOf(0x4a4f55), 1));
+              boxInto(trim, cx, cz, .15 + h, .15 + h + 2.4, rr2 * .8, rr2 * .8, jit(tint, .8));
+            }
+          }
           if (h < 26 && area >= 140 && srnd() < .75) {  // roof-access bulkhead
             const a = srnd() * 6.28, rr = Math.sqrt(area / Math.PI) * .38;
             boxInto(trim, cx + Math.cos(a) * rr, cz + Math.sin(a) * rr, .15 + h, .15 + h + 2.6, 1.15, 1.0, jit(tint, .74));

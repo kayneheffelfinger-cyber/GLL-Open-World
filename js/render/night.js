@@ -341,11 +341,11 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.76 — REAL WINDOWS', `
-    <p><b>Buildings get real windows, and the city edge disappears.</b></p>
-    <div class="kv"><span class="k">WINDOWS</span><span class="v">every facade now shows true rows and columns of framed glass, lit and dark, close up and from the high view</span></div>
-    <div class="kv"><span class="k">SEAMLESS EDGE</span><span class="v">the city ground fades into the land and the neighborhood streets begin where downtown ends</span></div>
-    <div class="kv"><span class="k">HOUSES</span><span class="v">low-rise lots now line the outer downtown streets, so density falls off gradually</span></div>
+  openModal('Welcome to v2.77 — SKYLINE', `
+    <p><b>Neighboring buildings finally look different.</b></p>
+    <div class="kv"><span class="k">SETBACKS</span><span class="v">mid-rises step in and slide to one side, with a lighter terrace below</span></div>
+    <div class="kv"><span class="k">CROWNS</span><span class="v">towers carry penthouses and masts instead of flat tops</span></div>
+    <div class="kv"><span class="k">ROOFS</span><span class="v">green roofs, parapets and accent roof colors across the low and mid-rise blocks</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }
