@@ -184,6 +184,10 @@ export const CITY = (() => {
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 8;
+    // the facade UVs advance 1.0 per WIN (3.2 m) but this tile holds N cells —
+    // without this one tile covered 16 windows per 3.2 m (0.2 m "windows" =
+    // speckle). 1/N makes each painted cell exactly one real window bay.
+    tex.repeat.set(1 / N, 1 / N);
     return tex;
   }
 
