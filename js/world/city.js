@@ -857,7 +857,17 @@ export const CITY = (() => {
       // v2.67 THE ARCHITECT (picture pass): the walls settle to a muted
       // FLAT mid-tone — the low-poly reference look reads calm and clean,
       // with the grass, water and gold frames carrying the saturation
-      const tint = jit(colOf(PAL[(Math.floor(srnd() * PAL.length) + dna.palOff) % PAL.length]), 1.02 + srnd() * .1);
+      let tint = jit(colOf(PAL[(Math.floor(srnd() * PAL.length) + dna.palOff) % PAL.length]), 1.02 + srnd() * .1);
+      // v2.70 DARK GLASS: the second reference picture's downtown is tall
+      // charcoal glass. Towers (26 m+) roll a glassy share — the city's
+      // own glass bias decides how many — and those walls pull toward
+      // dark slate (the facade texture multiplies by the wall tint, so the
+      // windows go deep and the mullions stay faint). Its own hash roll:
+      // the existing srnd sequence is untouched.
+      if (h >= 26) {
+        const dr = _mulberry(hashStr('g' + b.bkey))();
+        if (dr < Math.max(.3, Math.min(.92, .62 + dna.glass))) tint = tint.clone().lerp(colOf(h >= 60 ? 0x23272d : 0x30353c), h >= 60 ? .74 : .6);
+      }
       const shopTint = h >= 8.5 ? tint.clone().lerp(colOf(0xffffff), .5) : null;
       const y0 = shopTint ? 3.55 : .15;
       const sr = srnd();

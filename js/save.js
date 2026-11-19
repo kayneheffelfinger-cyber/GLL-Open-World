@@ -31,7 +31,7 @@ export function loadGame() {
     // per-version news gate: stores the version whose news was seen
     // (boolean true = the v2.0 launch news)
     STATE.seenNews = p.seenNews === true ? 'v2.0' : (p.seenNews || false);
-    STATE.gfx = p.gfx ? { shadows: p.gfx.sh !== 0, trees: p.gfx.tr !== 0, scale: p.gfx.sc === .75 || p.gfx.sc === .5 ? p.gfx.sc : 1, lite: !!p.gfx.lt } : STATE.gfx;   // v2.66 PICTURE (optional field — older builds ignore it)
+    STATE.gfx = p.gfx ? { shadows: p.gfx.sh !== 0, trees: p.gfx.tr !== 0, scale: p.gfx.sc === .75 || p.gfx.sc === .5 ? p.gfx.sc : 1, lite: !!p.gfx.lt, tone: p.gfx.tn === 0 ? 'classic' : 'moody' } : STATE.gfx;   // v2.66 PICTURE (optional field — older builds ignore it)
     STATE.designs = (p.dsg || []).filter(x => x && typeof x.n === 'string' && isFinite(+x.w) && isFinite(+x.f)).slice(0, 12)
       .map(x => ({ n: x.n.slice(0, 24), w: Math.max(6, Math.min(14, +x.w)), d: Math.max(6, Math.min(12, +x.d || 8)), f: Math.max(1, Math.min(12, x.f | 0)), s: x.s || 'brick' }));   // v2.67 THE ARCHITECT: raw drafts — builder.js re-derives the full spec (cost/days/income) on first use, so a balance tweak re-prices saved designs honestly
     // v2.18 PLANET EARTH: the world was re-projected onto the real globe —
@@ -196,7 +196,7 @@ export function saveGame() {
       mat: (() => { const o = {}; for (const k of ['Wood', 'Stone', 'Steel', 'Glass']) { const v = +((STATE.mat || {})[k]) || 0; if (isFinite(v) && v > 0) o[k] = +Math.min(1e6, v).toFixed(1); } return o; })(),   // v2.56 GROUND UP (optional field — older builds ignore it)
       pow: (() => { const s = STATE.pow || {}, g = s.g || {}; const o = { g: { m: +(g.m || 1).toFixed(3), pm: +(g.pm || 1).toFixed(3) }, b: {} }; for (const k in (s.b || {})) { const e = s.b[k]; if (e && typeof e === 'object' && (isFinite(+e.m) || e.cut || isFinite(+e.due))) o.b[k] = { m: +Math.min(1e6, Math.max(0, +e.m || 0)).toFixed(1), cut: e.cut ? 1 : 0, due: +Math.min(1e6, Math.max(0, +e.due || 0)).toFixed(2) }; } return o; })(),   // v2.59 THE GRID (optional field — older builds ignore it)
       rigs: (STATE.rigs || []).map(r => ({ id: r.id, name: r.name, x: +r.x || 0, z: +r.z || 0, price: +r.price || 0, ore: Math.round(+r.ore || 0), got: +(+r.got || 0).toFixed(1), crew: r.crew | 0, walked: !!r.walked, wageAcc: +(+r.wageAcc || 0).toFixed(2), sto: +(+r.sto || 0).toFixed(1), near: r.near || null, nearKey: r.nearKey || null })),   // v2.62 DEEP WATER (optional field — older builds ignore it)
-      gfx: STATE.gfx ? { sh: STATE.gfx.shadows === false ? 0 : 1, tr: STATE.gfx.trees === false ? 0 : 1, sc: STATE.gfx.scale === .75 || STATE.gfx.scale === .5 ? STATE.gfx.scale : 1, lt: STATE.gfx.lite ? 1 : 0 } : null,   // v2.66 PICTURE (optional field — older builds ignore it)
+      gfx: STATE.gfx ? { sh: STATE.gfx.shadows === false ? 0 : 1, tr: STATE.gfx.trees === false ? 0 : 1, sc: STATE.gfx.scale === .75 || STATE.gfx.scale === .5 ? STATE.gfx.scale : 1, lt: STATE.gfx.lite ? 1 : 0, tn: STATE.gfx.tone === 'classic' ? 0 : 1 } : null,   // v2.66 PICTURE (optional field — older builds ignore it)
       dsg: (STATE.designs || []).slice(0, 12).map(d => ({ n: d.name, w: +d.w || 10, d: +d.d || 8, f: d.floors | 0, s: d.style || 'brick' })),   // v2.67 THE ARCHITECT (optional field — older builds ignore it; cost/days/income re-derive on load, so a balance tweak in a later build re-prices old designs honestly)
       market: STATE.market ? STATE.market.pack() : null,
     };
