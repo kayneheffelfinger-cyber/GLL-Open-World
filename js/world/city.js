@@ -144,16 +144,16 @@ export const CITY = (() => {
       joint(x, y); belt(x, y);
       if (variant === 1) {                                  // glass curtain wall
         ctx.fillStyle = 'rgba(58,62,68,.30)'; ctx.fillRect(wx, wy, S, 3);              // spandrel line
-        ctx.fillStyle = glassFor(r, '#39424d', (r * 7 % 1) < .5 ? '#2e353e' : '#333a44');
+        ctx.fillStyle = glassFor(r, '#58687a', (r * 7 % 1) < .5 ? '#46566a' : '#4d5d71');
         ctx.fillRect(wx + 2, wy + 3, S - 4, S - 6);
-        ctx.fillStyle = 'rgba(255,255,255,.15)'; ctx.fillRect(wx + 2, wy + 3, S - 4, 2); // sky reflection
+        ctx.fillStyle = 'rgba(200,225,255,.26)'; ctx.fillRect(wx + 2, wy + 3, S - 4, 8); // sky reflection
         ctx.fillStyle = 'rgba(244,242,239,.9)'; ctx.fillRect(wx + S / 2 - 1, wy + 3, 2, S - 6); // mullion
         ctx.fillStyle = 'rgba(244,242,239,.55)';
         ctx.fillRect(wx, wy + 3, 2, S - 6); ctx.fillRect(wx + S - 2, wy + 3, 2, S - 6);
       } else if (variant === 2) {                           // punched openings (residential)
         ctx.fillStyle = 'rgba(70,70,74,.14)'; ctx.fillRect(wx, wy, S, 2);
         const pw = 21, ph = 22, ox = (S - pw) / 2, oy = 10;
-        ctx.fillStyle = glassFor(r, '#3d434c', '#343a42');
+        ctx.fillStyle = glassFor(r, '#56637a', '#475468');
         ctx.fillRect(wx + ox, wy + oy, pw, ph);
         ctx.fillStyle = 'rgba(255,255,255,.22)'; ctx.fillRect(wx + ox, wy + oy, pw, 2);
         ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(wx + ox - 1, wy + oy + ph, pw + 2, 2);
@@ -163,7 +163,7 @@ export const CITY = (() => {
         ctx.fillStyle = 'rgba(255,255,255,.28)';
         ctx.fillRect(wx + 3, wy, 2, S); ctx.fillRect(wx + S - 5, wy, 2, S); // pilaster edges
         const bw = 20, bh = S - 18, ox = (S - bw) / 2, oy = 9;
-        ctx.fillStyle = glassFor(r, '#3d434c', '#363c45');
+        ctx.fillStyle = glassFor(r, '#56637a', '#4a576b');
         ctx.fillRect(wx + ox, wy + oy, bw, bh);
         ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.fillRect(wx + ox, wy + oy, bw, 2);
         ctx.fillStyle = 'rgba(70,70,74,.2)'; ctx.fillRect(wx, wy, S, 2);
@@ -172,9 +172,9 @@ export const CITY = (() => {
         ctx.fillStyle = 'rgba(70,70,74,.18)'; ctx.fillRect(wx, wy, S, 2);
         if (r < .13) ctx.fillStyle = '#ffedbe';                 // lit windows (two warmths)
         else if (r < .21) ctx.fillStyle = '#ffe3a6';
-        else if (r < .30) ctx.fillStyle = '#3d434c';
+        else if (r < .30) ctx.fillStyle = '#566377';
         else if (r > .955) ctx.fillStyle = '#262b31';           // blinds drawn
-        else ctx.fillStyle = (r * 7 % 1) < .5 ? '#333941' : '#373d46';
+        else ctx.fillStyle = (r * 7 % 1) < .5 ? '#46526a' : '#4b5870';
         ctx.fillRect(gx, gy, gw, gh);
         ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(gx, gy, gw, 2);       // glass sheen
         ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(gx - 1, gy + gh, gw + 2, 3); // sill
