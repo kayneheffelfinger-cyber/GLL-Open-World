@@ -1,0 +1,141 @@
+// Plain Node 20, no dependencies. Run: node scripts/ci-check.mjs
+import { readFileSync, existsSync, writeFileSync, mkdtempSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join, dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const rd = (f) => readFileSync(join(root, f), 'utf8');
+let failed = false;
+const say = (s, name, msg) => { console.log(`${s}: ${name} - ${msg}`); if (s === 'FAIL') failed = true; };
+
+// 1. since v2.60: openworld.html is the modular shell (css/style.css + js/boot.js);
+//    game.html is the frozen pre-v2.60 single-file baseline, deliberately NOT a copy — do not sync it
+if (!existsSync(join(root, 'game.html'))) say('FAIL', 'game-copy', 'game.html baseline missing');
+else {
+  const shell = /<script[^>]*src=["'][^"']*js\/boot\.js["']/.test(rd('openworld.html')) &&
+    /<link[^>]*href=["'][^"']*css\/style\.css["']/.test(rd('openworld.html'));
+  say(shell ? 'PASS' : 'FAIL', 'game-copy',
+    shell ? 'openworld.html is the modular shell; game.html kept as the frozen baseline'
+          : 'openworld.html must load css/style.css and js/boot.js (see AGENTS.md)');
+}
+
+// 2. inline scripts parse
+const tmp = mkdtempSync(join(tmpdir(), 'ci-'));
+for (const f of ['openworld.html', 'index.html']) {
+  let n = 0, bad = 0;
+  for (const m of rd(f).matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
+    const attrs = m[1];
+    if (/\bsrc\s*=/i.test(attrs)) continue;
+    const type = (/\btype\s*=\s*["']?([^\s"'>]+)/i.exec(attrs) || [])[1] || '';
+    if (type && type !== 'module' && !/javascript/i.test(type)) continue;
+    n++;
+    const p = join(tmp, `s${n}.mjs`); // .mjs for all: classic scripts without import/export also parse as modules
+    writeFileSync(p, m[2]);
+    try { execFileSync(process.execPath, ['--check', p], { stdio: 'pipe' }); }
+    catch (e) { bad++; console.log(String(e.stderr).split('\n').slice(0, 4).join('\n')); }
+  }
+  say(bad ? 'FAIL' : 'PASS', 'script-syntax', `${f}: ${n} inline scripts, ${bad} failed`);
+}
+
+// 2b. every ES module under js/ parses (since v2.60 the game is modular)
+{
+  let files = [];
+  try { files = execFileSync('bash', ['-c', 'find js -name "*.js" 2>/dev/null | sort']).toString().split('\n').filter(Boolean); }
+  catch { files = []; }
+  let bad = 0;
+  for (const f of files) {
+    const p = join(tmp, f.replace(/\//g, '_') + '.mjs');
+    writeFileSync(p, readFileSync(join(root, f)));
+    try { execFileSync(process.execPath, ['--check', p], { stdio: 'pipe' }); }
+    catch (e) { bad++; console.log(String(e.stderr).split('\n').slice(0, 4).join('\n')); }
+  }
+  say(files.length ? (bad ? 'FAIL' : 'PASS') : 'FAIL', 'modules',
+    files.length ? `${files.length} ES modules under js/, ${bad} failed` : 'no js/ modules found');
+}
+
+// 3. secrets in tracked files
+const pats = [/-----BEGIN [A-Z ]*PRIVATE KEY-----/, /sb_secret/, /service_role/, /\b(AKIA|ASIA)[0-9A-Z]{16}\b/, /\bghp_[A-Za-z0-9]{20,}/, /github_pat_[A-Za-z0-9_]{20,}/];
+let hits = [];
+let files = [];
+try { files = execFileSync('git', ['ls-files', '-z'], { cwd: root }).toString().split('\0').filter(Boolean); } catch { say('WARN', 'secrets', 'not a git checkout'); }
+for (const f of files) {
+  if (f === 'scripts/ci-check.mjs') continue; // this file contains the patterns themselves
+  let b; try { b = readFileSync(join(root, f)); } catch { continue; }
+  if (b.includes(0)) continue; // binary
+  const t = b.toString('utf8');
+  for (const p of pats) if (p.test(t)) hits.push(`${f} (${p.source.slice(0, 20)})`);
+}
+if (files.length) say(hits.length ? 'FAIL' : 'PASS', 'secrets', hits.length ? hits.join(', ') : `${files.length} tracked files scanned`);
+
+// 4. local references exist
+for (const f of ['index.html', 'openworld.html', 'privacy.html', 'terms.html']) {
+  const missing = new Set();
+  for (const m of rd(f).matchAll(/\b(?:src|href)\s*=\s*["']([^"']+)["']/gi)) {
+    const u = m[1].trim();
+    if (/^([a-z][a-z0-9+.-]*:|\/\/|#|data:)/i.test(u)) continue;
+    const p = u.split(/[?#]/)[0];
+    if (p && !existsSync(join(root, p))) missing.add(u);
+  }
+  say(missing.size ? 'FAIL' : 'PASS', 'local-refs', `${f}: ${missing.size ? 'missing ' + [...missing].join(', ') : 'all exist'}`);
+}
+
+// 4b. index.html release summary stays under 200 words (rule since 2026-11-08)
+{
+  const mm = /<div[^>]*class="[^"]*\bnews\b[^"]*"[^>]*>([\s\S]*?)<\/div>/i.exec(rd('index.html'));
+  if (!mm) say('FAIL', 'news-length', 'index.html needs a <div class="news"> release summary block');
+  else {
+    const words = mm[1]
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&[a-zA-Z#0-9]+;/g, ' ')
+      .split(/\s+/)
+      .filter((t) => /[A-Za-z0-9]/.test(t)).length;
+    say(words <= 200 ? 'PASS' : 'FAIL', 'news-length',
+      `index.html release summary: ${words} words (max 200) — newest version in a paragraph, older releases one line each, full log in CHANGES.md`);
+  }
+}
+
+// 4c. boot-screen fine print (#veil .at) stays under 200 words and keeps the map attribution
+{
+  const mm = /<div class="at">(.*?)<\/div>/s.exec(rd('openworld.html'));
+  if (!mm) say('FAIL', 'at-length', 'openworld.html needs the #veil .at fine-print block');
+  else {
+    const words = mm[1]
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&[a-zA-Z#0-9]+;/g, ' ')
+      .split(/\s+/)
+      .filter((t) => /[A-Za-z0-9]/.test(t)).length;
+    const attr = mm[1].includes('OpenStreetMap contributors');
+    say(words <= 200 && attr ? 'PASS' : 'FAIL', 'at-length',
+      `boot fine print: ${words} words (max 200), OSM attribution ${attr ? 'present' : 'MISSING'}`);
+  }
+}
+
+// 4d. legal pages exist, dated, and linked from the landing + in-game boot (since 2026-11-08)
+{
+  const need = { 'privacy.html': 'Privacy Policy', 'terms.html': 'Terms of Service' };
+  const bad = [];
+  for (const [f, t] of Object.entries(need)) {
+    if (!existsSync(join(root, f))) { bad.push(`${f} missing`); continue; }
+    const c = rd(f);
+    if (!c.includes(`<title>Open World — ${t}</title>`)) bad.push(`${f}: wrong title`);
+    if (!/LAST UPDATED: \d{4}-\d{2}-\d{2}/.test(c)) bad.push(`${f}: no LAST UPDATED date`);
+    if (!c.includes('href="index.html"')) bad.push(`${f}: no link back to the landing`);
+  }
+  const idx = rd('index.html');
+  for (const f of Object.keys(need)) if (!idx.includes(`href="${f}"`)) bad.push(`index.html does not link ${f}`);
+  let night = '';
+  try { night = rd('js/render/night.js'); } catch {}
+  for (const f of Object.keys(need)) if (!night.includes(`'${f}'`)) bad.push(`js/render/night.js does not link ${f}`);
+  say(bad.length ? 'FAIL' : 'PASS', 'legal', bad.length ? bad.join('; ') : 'privacy.html + terms.html present, dated, linked from the landing footer and the in-game boot modals');
+}
+
+// 5. version consistency
+const iv = (/class="pill">\s*(v2\.\d+)/.exec(rd('index.html')) || [])[1];
+const ov = (/<title>[^<]*?(v2\.\d+)/.exec(rd('openworld.html')) || [])[1];
+let jv; try { jv = JSON.parse(rd('version.json')).version; } catch {}
+console.log(`  index.html=${iv} openworld.html title=${ov} version.json=${jv}`);
+say(iv && ov && iv === ov ? 'PASS' : 'FAIL', 'version', iv && ov ? `index ${iv} vs title ${ov}` : 'version string not found');
+
+process.exit(failed ? 1 : 0);

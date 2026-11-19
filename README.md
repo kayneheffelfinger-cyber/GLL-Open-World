@@ -1,8 +1,8 @@
 # Open World
 
-A single-player, in-browser tycoon game set on the real Earth. Current version: **v2.27** ("True Scale").
+A single-player, in-browser tycoon game set on the real Earth. Current version: **v2.60** ("The Rebuild").
 
-Search for any real city and the game builds it from OpenStreetMap data: real streets, buildings, greens and plots, all standing on dry land. Since v2.27 the world is 1:1 with the actual Earth — 111,320 meters per degree, 40,007 km around — with real distances between cities, a real horizon, and whole regions visible when you zoom out. Every one of the 64 catalog cities stands at its real spot as a metro-scale skyline before you ever walk there — walk in and it upgrades to the fully detailed downtown.
+Search for any real city and the game builds it from OpenStreetMap data: real streets, buildings, greens and plots, all standing on dry land. Since v2.27 the world is 1:1 with the actual Earth — 111,320 meters per degree, 40,007 km around — with real distances between cities, a real horizon, and whole regions visible when you zoom out. Every one of the 64 catalog cities stands at its real spot as a metro-scale skyline before you ever walk there — walk in and it upgrades to the fully detailed downtown, and every inter-city road ends at a real junction with the first street of the city it serves (the skyline's sprawl streets while the city is distant, the imported true streets once you arrive). Since v2.32 the world wears the Capital Rift art direction the way their own world shots actually look — olive-green grass land with light/dark patches, teal-blue seas and lakes with pale-sand fringes and aqua shallows, a soft azure sky over pale daylight haze, warm noon light, and distant skylines that read as gray masses on the horizon — all on the same true-scale Earth. v2.32 also fixed the biggest visual bug since the Earth rewrite: most land and lake triangles were wound upside-down, so the whole base terrain lost the sun and rendered ~35% dark; every surface now faces up and lights correctly, inter-city roads are legible at multi-km zoom (dark asphalt, light shoulders, cream dashes), and the street-level fog pulls back to 420–2100 m so mid-distance detail stays readable.
 
 ## Play
 
@@ -40,11 +40,13 @@ The loop, as described by the in-game starter guide:
 
 ## Under the hood
 
-- Static HTML and JavaScript. The whole game is `openworld.html` (about 8,700 lines), with `index.html` as the landing page.
-- 3D with three.js 0.160, loaded from unpkg.
+- Static HTML and JavaScript, no build step. Since v2.60 the game is modular: `openworld.html` is a thin page that loads `css/style.css` and `js/boot.js`, and the code lives in 31 ES modules — `js/config.js` (catalog) / `util.js` / `state.js` / `save.js` / `core.js` (land mask, coastlines), `js/world/` (osm, earth, world, city, actors, worldforest), `js/render/` (main, night), `js/systems/` (one file per game system) and `js/ui/dom.js`. `game.html` is kept as the pre-refactor single-file v2.59 baseline for A/B comparison. New features go in `js/systems/` as new files (see AGENTS.md).
+- 3D with three.js 0.160, bundled in `vendor/three/` (MIT).
 - Live calls to OpenStreetMap Overpass (map data) and Nominatim (city search); if Overpass is unreachable, a built-in generator lays out the city instead. Map data is (c) OpenStreetMap contributors (ODbL).
 - True-scale Earth (v2.27): one degree is really 111 km and the world spans 40,007 km. World coordinates reach ±20 million meters — past float32 vertex precision — so the static planet (coasts, lakes, roads, bridges) is built as 8° world tiles and city/chunk-local frames, each positioned in double precision. Near every coast the land/water gate answers from the vector coastlines the player actually sees (the 0.25° land raster only settles open ocean and deep interior), and roads that cross vector water become causeways with guard pylons.
 - The world is pre-built (v2.26): all 64 cities stand in the world from the moment you enter — distant skylines use the city's true footprint spread to metro scale (true building sizes, no boot-time network calls) and are upgraded to full detail when you arrive.
+- Depth-stable ground (v2.30): every world tile's land is a grid of small polygons and every city sits on an exact fine land pad, so at 1:1 scale the city floors are solid (no grass z-fight bleeding through) and the inter-city roads render all the way from each city's streets into the countryside.
+- Roads meet the streets (v2.29): each land route keeps a re-trimmable final stretch before every city, so the highway always ends at a junction with the streets that are actually standing — the skyline's sprawl streets from afar, the imported city's true streets up close, ramping down to street level to merge with the real asphalt.
 - On boot the game reads same-origin `version.json` and offers the one-tap self-update described above. Saves from earlier versions migrate to the true-scale world: plots keep their spot beside their city, everything else keeps its lat/lon.
 - No accounts. Your world is saved in your browser's localStorage under the key `openworld-v2`, so it stays on that browser and device.
 
