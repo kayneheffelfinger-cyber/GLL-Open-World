@@ -143,7 +143,7 @@ export const STK = (() => {
     if (S.enabled && S.rules && S.rules.stocks !== false && !b) installButton();
   });
   function installButton() {
-    const row = document.getElementById('bb-row'), help = document.getElementById('b-help'); if (!row) return;
+    const help = document.getElementById('b-help'), row = help ? help.parentNode : document.getElementById('bb-row'); if (!row) return;
     const b = document.createElement('button'); b.className = 'bb-btn'; b.id = 'b-stocks';
     b.innerHTML = '<span class="tip">STOCKS</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l5-6 4 3 8-9"/><path d="M15 5h5v5"/></svg>';
     b.onclick = () => open();

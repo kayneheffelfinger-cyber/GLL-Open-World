@@ -246,7 +246,7 @@ export const CO = (() => {
   // ---- the UI --------------------------------------------------------------------------------
   function installButton() {
     if (document.getElementById('b-company')) return;
-    const row = document.getElementById('bb-row'), help = document.getElementById('b-help');
+    const help = document.getElementById('b-help'), row = help ? help.parentNode : document.getElementById('bb-row');
     if (!row) return;
     const b = document.createElement('button');
     b.className = 'bb-btn'; b.id = 'b-company';
@@ -341,7 +341,7 @@ export const CO = (() => {
     if (can('withdraw')) h += '<div class="co-row"><input id="co-wd" type="number" min="1" step="1" placeholder="amount"><input id="co-wdm" maxlength="60" placeholder="memo (optional)"><button class="tpbtn" data-co="bankwd">WITHDRAW</button></div><p class="co-sub">Your limit: ' + fmt$(c.myWithdrawLimit || 0) + ' per day. Money lands in your exchange wallet.</p>';
     h += '</div>';
     if (can('view_ledger')) {
-      if (!S.ledger) { setTimeout(() => { if (S.ledger === null) loadLedger(); }, 0); S.ledger = false; }
+      if (S.ledger === null) { S.ledger = false; loadLedger(); }
       const L = S.ledger && S.ledger.entries || [];
       h += '<div class="co-card"><div class="msec">Ledger</div>' + (L.length ? L.map(e => '<div class="co-led"><span class="co-sub">' + new Date(e.ts).toLocaleString() + '</span><span>' + esc(e.type.replace(/_/g, ' ')) + (e.memberName ? ' · ' + esc(e.memberName) : '') + (e.memo ? ' · ' + esc(e.memo) : '') + '</span><b class="' + (e.amount < 0 ? 'r' : 'g') + '">' + (e.amount < 0 ? '-' : '+') + fmt$(Math.abs(e.amount)) + '</b></div>').join('') : '<p class="co-sub">No entries yet.</p>') +
         (S.ledger && S.ledger.next ? '<button class="tpbtn" data-co="more">MORE</button>' : '') + '</div>';
