@@ -25,6 +25,26 @@ export function _mulberry(seed) {
   };
 }
 export const hashStr = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+// v2.92 VEHICLE VARIETY: one shared table for parked cars (city.js) and moving traffic (systems/traffic.js).
+// Every kind reuses the single body/cab/wheel instanced geometry; a kind is a body scale, a cab scale +
+// offset and a wheel layout (the sedan is the identity, i.e. exactly the old car).
+export const VEH = [
+  { n: 'sedan',  bs: [1, 1, 1],           cs: [1, 1, 1],        ct: [0, 0, 0],       wx: 1.32, wz: .79, wr: 1 },
+  { n: 'hatch',  bs: [.82, 1, .95],       cs: [.9, 1.12, .95],  ct: [.05, -.09, 0],  wx: 1.05, wz: .76, wr: .95 },
+  { n: 'suv',    bs: [1.04, 1.22, 1.06],  cs: [1.2, 1, 1.05],   ct: [0, .26, 0],     wx: 1.38, wz: .82, wr: 1.2 },
+  { n: 'pickup', bs: [1.12, 1, 1.05],     cs: [.62, 1, .96],    ct: [.55, .03, 0],   wx: 1.45, wz: .82, wr: 1.2 },
+  { n: 'van',    bs: [1.1, 1.5, 1.08],    cs: [1.3, .5, 1.32],  ct: [.3, .32, 0],    wx: 1.4,  wz: .84, wr: 1.15 },
+  { n: 'bus',    bs: [2.6, 1.85, 1.45],   cs: [2.5, .5, 1.47],  ct: [.6, .62, 0],    wx: 3.4,  wz: 1.05, wr: 1.5 }];
+export const VEH_PAL = [0xe8e8e6, 0xb9bdc1, 0x2e3134, 0x6f7479, 0x9e3b33, 0x39527a, 0x4a5560, 0x2f4f3a, 0x7a5a3a, 0xc9c2a8, 0xa8742e, 0x5a3a6a];
+export const VEH_VAN = [0xe8e8e6, 0xe8e8e6, 0xb9bdc1, 0x39527a, 0x6f7479];
+export const VEH_BUS = [0x2f6fa8, 0xb53a30, 0x2f7a4f, 0xd9b53a];
+// pick a kind from a 0..1 roll: sedan 38 / hatch 18 / suv 20 / pickup 8 / van 9 / bus 7 (buses only where allowed)
+export function pickVeh(r, allowBus) {
+  const cut = allowBus ? [.38, .56, .76, .84, .93] : [.41, .60, .82, .90, 1.01];
+  for (let k = 0; k < 5; k++) if (r < cut[k]) return k;
+  return allowBus ? 5 : 4;
+}
+export const vehLen = k => 4.05 * VEH[k].bs[0];
 // great-circle distance in km + initial bearing in degrees (from north)
 export function gcKmLL(lat1, lon1, lat2, lon2) {
   const r = Math.PI / 180;

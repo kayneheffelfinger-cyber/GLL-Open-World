@@ -26,7 +26,7 @@
 // QA surface: window.TRAFFIC (count / car(i) / state()).
 // ====================================================================
 import * as THREE from 'three';
-import { _mulberry, hashStr } from '../util.js';
+import { _mulberry, hashStr, VEH, VEH_PAL, VEH_VAN, VEH_BUS, pickVeh, vehLen } from '../util.js';
 import { STATE } from '../state.js';
 import { CITY } from '../world/city.js';
 import { ACTORS } from '../world/actors.js';
@@ -36,7 +36,7 @@ export const TRAFFIC = (() => {
   // class speeds in m/s (motorway/trunk/primary 3, secondary/tertiary 2,
   // residential & friends 1) — ~46/32/23 km/h reads right at game scale
   const SPEED = { 3: 12.5, 2: 9, 1: 6.5 };
-  const PALETTE = [0xe8e8e6, 0xb9bdc1, 0x2e3134, 0x6f7479, 0x9e3b33, 0x39527a, 0x4a5560];
+  const PALETTE = VEH_PAL;   // v2.92: the shared, wider palette
   const TAXI = 0xd9b53a;
 
   let cars = [];
@@ -46,9 +46,12 @@ export const TRAFFIC = (() => {
 
   // scratch — never allocate per frame
   const ROT = new THREE.Matrix4(), MAT = new THREE.Matrix4();
-  const WLOC = [1.32, -1.32, 1.32, -1.32].map((x, k) =>
-    new THREE.Matrix4().makeTranslation(x, .3, k % 2 ? .79 : -.79));
   const TMP = new THREE.Matrix4();
+  // v2.92: per-kind local matrices (body scale, cab offset+scale, four wheels) — built once
+  const BODY_M = VEH.map(v => new THREE.Matrix4().makeScale(v.bs[0], v.bs[1], v.bs[2]));
+  const CAB_M = VEH.map(v => new THREE.Matrix4().makeTranslation(v.ct[0], v.ct[1], v.ct[2]).multiply(new THREE.Matrix4().makeScale(v.cs[0], v.cs[1], v.cs[2])));
+  const WHEEL_M = VEH.map(v => [v.wx, -v.wx, v.wx, -v.wx].map((x, k) =>
+    new THREE.Matrix4().makeTranslation(x, .3 * v.wr, k % 2 ? v.wz : -v.wz).multiply(new THREE.Matrix4().makeScale(v.wr, v.wr, v.wr))));
 
   function drivable() {
     return (CITY.roads || []).filter(r => !r.ped && r.pts && r.pts.length > 1);
@@ -124,7 +127,11 @@ export const TRAFFIC = (() => {
       lane(c, a, b);
       cars.push(c);
       const taxi = tier3 && rnd() < .18;
-      body.setColorAt(i, col.set(taxi ? TAXI : PALETTE[Math.floor(rnd() * PALETTE.length)]));
+      const pc = PALETTE[Math.floor(rnd() * PALETTE.length)];                  // same rnd draws as before
+      // v2.92: the kind comes from its own hash, so the fleet's roads / speeds / colors above are unchanged
+      const vk = taxi ? 0 : pickVeh((hashStr('vk' + (rec.key || rec.name || 'x') + i) % 1000) / 1000, tier >= 2 && rd.cls >= 2);
+      c.kind = vk;
+      body.setColorAt(i, col.set(taxi ? TAXI : vk === 5 ? VEH_BUS[i % VEH_BUS.length] : vk === 4 ? VEH_VAN[i % VEH_VAN.length] : pc));
       stampCar(i);
     }
     if (body.instanceColor) body.instanceColor.needsUpdate = true;
@@ -158,10 +165,11 @@ export const TRAFFIC = (() => {
     const A = CITY.anchor || { x: 0, z: 0 };
     ROT.makeRotationY(c.h);
     MAT.copy(ROT); MAT.setPosition(c.x - A.x, 0, c.z - A.z);
-    body.setMatrixAt(i, MAT);
-    cab.setMatrixAt(i, MAT);
+    const k = c.kind | 0;
+    body.setMatrixAt(i, TMP.multiplyMatrices(MAT, BODY_M[k]));
+    cab.setMatrixAt(i, TMP.multiplyMatrices(MAT, CAB_M[k]));
     for (let w = 0; w < 4; w++)
-      wheels.setMatrixAt(i * 4 + w, TMP.multiplyMatrices(MAT, WLOC[w]));
+      wheels.setMatrixAt(i * 4 + w, TMP.multiplyMatrices(MAT, WHEEL_M[k][w]));
   }
 
   // polyline end: hop to a nearby street when one exists, U-turn if not
@@ -215,9 +223,10 @@ export const TRAFFIC = (() => {
         const Lo = Math.hypot(rd.pts[o.seg + 1][0] - rd.pts[o.seg][0], rd.pts[o.seg + 1][1] - rd.pts[o.seg][1]) || 1;
         const gap = (segBase(rd, o.seg) + o.t * Lo) - P;
         const ahead = gap * c.dir;
-        if (ahead > 0 && ahead < 8) {
-          if (ahead < 4.2) want = 0;
-          else want = Math.min(want, Math.max(0, o.v) + (ahead - 4.2) * 1.2);
+        const ext = (vehLen(o.kind | 0) + vehLen(c.kind | 0)) / 2 - 4.05;   // v2.92: a bus needs a longer gap than a hatchback
+        if (ahead > 0 && ahead < 8 + ext) {
+          if (ahead < 4.2 + ext) want = 0;
+          else want = Math.min(want, Math.max(0, o.v) + (ahead - 4.2 - ext) * 1.2);
         }
       }
       // the player steps into the lane — hold, don't clip the chibi
@@ -312,7 +321,7 @@ export const TRAFFIC = (() => {
       return {
         x: +c.x.toFixed(1), z: +c.z.toFixed(1), v: +c.v.toFixed(1),
         hx: +Math.cos(c.h).toFixed(3), hz: -Math.sin(c.h).toFixed(3),   // heading unit vector (world)
-        road: c.rd && c.rd.name || '', dir: c.dir,
+        road: c.rd && c.rd.name || '', dir: c.dir, kind: VEH[c.kind | 0].n,   // v2.92: QA — the vehicle kind
       };
     },
     state() {

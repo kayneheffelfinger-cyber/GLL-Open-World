@@ -4,7 +4,7 @@
 // ====================================================================
 import * as THREE from 'three';
 import { ECON } from '../config.js';
-import { _ihash, _mulberry, _polyArea, hashStr, cityDNA } from '../util.js';
+import { _ihash, _mulberry, _polyArea, hashStr, cityDNA, VEH, VEH_PAL, VEH_VAN, pickVeh } from '../util.js';
 import { suburbRoads, coreR } from '../suburbs.js';   // v2.73
 import { LANDGEO } from '../core.js';
 import { WORLD } from '../world/world.js';
@@ -1692,19 +1692,25 @@ export const CITY = (() => {
       const body = new THREE.InstancedMesh(bodyGeo, new THREE.MeshLambertMaterial({ color: 0xffffff }), n);
       const cab = new THREE.InstancedMesh(cabGeo, new THREE.MeshLambertMaterial({ color: 0x15181d }), n);
       const wheels = new THREE.InstancedMesh(whGeo, new THREE.MeshLambertMaterial({ color: 0x1d2024 }), n * 4);
-      const PALETTE = [0xe8e8e6, 0xb9bdc1, 0x2e3134, 0x6f7479, 0x9e3b33, 0x39527a, 0x4a5560];
-      const mat4 = new THREE.Matrix4(), rot = new THREE.Matrix4(), loc = new THREE.Matrix4();
+      const PALETTE = VEH_PAL;   // v2.92: shared, wider palette (util.js)
+      const mat4 = new THREE.Matrix4(), rot = new THREE.Matrix4(), loc = new THREE.Matrix4(), tmp = new THREE.Matrix4();
       const c = new THREE.Color();
+      // v2.92 VEHICLE VARIETY: per-kind local matrices, built once (the sedan is the identity = the old car)
+      const BODY_M = VEH.map(v => new THREE.Matrix4().makeScale(v.bs[0], v.bs[1], v.bs[2]));
+      const CAB_M = VEH.map(v => new THREE.Matrix4().makeTranslation(v.ct[0], v.ct[1], v.ct[2]).multiply(new THREE.Matrix4().makeScale(v.cs[0], v.cs[1], v.cs[2])));
+      const WHEEL_M = VEH.map(v => [v.wx, v.wx, -v.wx, -v.wx].map((x, w) =>
+        new THREE.Matrix4().makeTranslation(x, .3 * v.wr, w % 2 ? v.wz : -v.wz).multiply(new THREE.Matrix4().makeScale(v.wr, v.wr, v.wr))));
       for (let i = 0; i < n; i++) {
         const [x, z, th, taxi] = spots[i];
         rot.makeRotationY(th);
         mat4.copy(rot); mat4.setPosition(x - AX, 0, z - AZ);
-        body.setMatrixAt(i, mat4);
-        cab.setMatrixAt(i, mat4);
-        body.setColorAt(i, c.set(taxi ? 0xd9b53a : PALETTE[Math.floor(rnd() * PALETTE.length)]));
+        const pc = PALETTE[Math.floor(rnd() * PALETTE.length)];                     // the original rnd draw, kept
+        const k = taxi ? 0 : pickVeh((hashStr('vp' + Math.round(x) + ',' + Math.round(z)) % 1000) / 1000, false);   // curb rows: no buses
+        body.setMatrixAt(i, tmp.multiplyMatrices(mat4, BODY_M[k]));
+        cab.setMatrixAt(i, tmp.multiplyMatrices(mat4, CAB_M[k]));
+        body.setColorAt(i, c.set(taxi ? 0xd9b53a : k === 4 ? VEH_VAN[i % VEH_VAN.length] : pc));
         for (let w = 0; w < 4; w++) {
-          loc.makeTranslation(w < 2 ? 1.32 : -1.32, .3, w % 2 ? .79 : -.79);
-          wheels.setMatrixAt(i * 4 + w, new THREE.Matrix4().multiplyMatrices(mat4, loc));
+          wheels.setMatrixAt(i * 4 + w, tmp.multiplyMatrices(mat4, WHEEL_M[k][w]));
         }
       }
       body.castShadow = true;

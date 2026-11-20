@@ -341,11 +341,11 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.91 — STREET FURNITURE', `
-    <p><b>Streets stop looking copy-pasted.</b></p>
-    <div class="kv"><span class="k">LAMPS</span><span class="v">short globe-top posts beside the arm lamps, in several pole colors</span></div>
-    <div class="kv"><span class="k">FITTINGS</span><span class="v">red, yellow and blue hydrants; round and square recycling bins; benches in wood, green, steel and brick, some without a back</span></div>
-    <div class="kv"><span class="k">EXTRAS</span><span class="v">newspaper boxes and planters on the sidewalks</span></div>
+  openModal('Welcome to v2.92 — VEHICLE VARIETY', `
+    <p><b>The street is not one car.</b></p>
+    <div class="kv"><span class="k">KINDS</span><span class="v">sedans, hatchbacks, SUVs, pickups and vans parked at the curb and on the move</span></div>
+    <div class="kv"><span class="k">BUSES</span><span class="v">long transit buses on the arterials, queued with proper gaps</span></div>
+    <div class="kv"><span class="k">COLORS</span><span class="v">a wider paint range, with white and gray vans and colored buses</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }
