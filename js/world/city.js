@@ -248,16 +248,21 @@ export const CITY = (() => {
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const ctx = cv.getContext('2d');
     ctx.fillStyle = '#cfc9c0'; ctx.fillRect(0, 0, W, H);       // light base (tinted per building)
-    const AWN = [['#b03a30', '#ece6dc'], ['#2f6b4a', '#ece6dc'], ['#2a4a68', '#ece6dc'], ['#3a3a3d', '#d8d3c9']];
+    // v2.85 SHOPFRONTS: eight awning palettes and three awning styles (striped, solid, scalloped)
+    // plus a sign board over some doors, so a street of shops stops repeating one four-awning loop
+    const AWN = [['#b03a30', '#ece6dc'], ['#2f6b4a', '#ece6dc'], ['#2a4a68', '#ece6dc'], ['#3a3a3d', '#d8d3c9'],
+      ['#c9852b', '#f1e4c4'], ['#6b3f7a', '#e6dcea'], ['#1f7a7a', '#dcebea'], ['#8a2f4a', '#efdadf']];
     for (let i = 0; i < W / C; i++) {
       const x0 = i * C;
       ctx.fillStyle = '#bdb6ac';                               // pilaster dividers
       ctx.fillRect(x0, 0, 10, H); ctx.fillRect(x0 + C - 10, 0, 10, H);
       // awning valance (canvas top = texture top)
-      const [a, b] = AWN[i % 4];
-      ctx.fillStyle = b; ctx.fillRect(x0 + 10, 0, C - 20, 60);
+      const [a, b] = AWN[(i * 3 + (i >> 2)) % 8], style = (i * 5 + (i >> 1)) % 3;
+      ctx.fillStyle = style === 1 ? a : b; ctx.fillRect(x0 + 10, 0, C - 20, 60);
       ctx.fillStyle = a;
-      for (let s = 0; s < 4; s++) ctx.fillRect(x0 + 10 + s * 30, 0, 16, 60);
+      if (style !== 1) for (let s = 0; s < 4; s++) ctx.fillRect(x0 + 10 + s * 30, 0, 16, 60);
+      if (style === 2) { ctx.fillStyle = a; for (let s = 0; s < 4; s++) { ctx.beginPath(); ctx.arc(x0 + 18 + s * 30, 60, 8, 0, Math.PI); ctx.fill(); } }   // scalloped edge
+      if (i % 3 === 1) { ctx.fillStyle = 'rgba(20,22,26,.82)'; ctx.fillRect(x0 + 30, 70, C - 60, 14); ctx.fillStyle = b; ctx.fillRect(x0 + 36, 75, C - 72, 4); }   // a sign board
       ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(x0 + 10, 60, C - 20, 8);   // valance shadow
       // storefront glass
       ctx.fillStyle = '#222b34'; ctx.fillRect(x0 + 10, 68, C - 20, H - 68);
@@ -707,7 +712,8 @@ export const CITY = (() => {
           [a[0], yA, a[1]], [a[0], yB, a[1]], [c[0], yB, c[1]], [c[0], yA, c[1]],
           [nx, 0, nz], [u0, vOff], [u0, (yB - yA) / WIN + vOff], [u1, (yB - yA) / WIN + vOff], [u1, vOff], tint);
         if (shopTint && len > 5.5) {
-          const s0 = per / (WIN * 8), s1 = (per + len) / (WIN * 8);  // one storefront per window cell
+          const so = (uOff % 8) / 8;                                  // v2.85: each building starts on a different shop
+          const s0 = per / (WIN * 8) + so, s1 = (per + len) / (WIN * 8) + so;  // one storefront per window cell
           pushQuad(shops,
             [a[0], .15, a[1]], [a[0], yA, a[1]], [c[0], yA, c[1]], [c[0], .15, c[1]],
             [nx, 0, nz], [s0, 0], [s0, 1], [s1, 1], [s1, 0], shopTint);
@@ -777,7 +783,18 @@ export const CITY = (() => {
     };
     // rooftop clutter (HVAC, water tanks, antennas)
     const clutter = (poly, areaFor, yTop) => {
-      if (areaFor <= 500) return;
+      if (areaFor <= 500) {
+        // v2.85: small roofs get a unit or two as well — own hash, so the shared rnd sequence is untouched
+        if (areaFor < 90 || poly.length < 3) return;
+        const qx = poly.reduce((s2, v) => s2 + v[0], 0) / poly.length, qz = poly.reduce((s2, v) => s2 + v[1], 0) / poly.length;
+        const cr = _mulberry(hashStr('k' + Math.round(qx) + ',' + Math.round(qz)));
+        if (cr() < .62) {
+          let mr = 1e9; poly.forEach(v => mr = Math.min(mr, Math.hypot(v[0] - qx, v[1] - qz)));
+          const n2 = cr() < .35 ? 2 : 1;
+          for (let i = 0; i < n2; i++) { const a2 = cr() * 6.28, d2 = mr * .4 * cr(); hvac.push([qx + Math.cos(a2) * d2, yTop, qz + Math.sin(a2) * d2, 1.3 + cr() * 1.3, .8 + cr() * .8]); }
+        }
+        return;
+      }
       const ccx = poly.reduce((s, v) => s + v[0], 0) / poly.length;
       const ccz = poly.reduce((s, v) => s + v[1], 0) / poly.length;
       const n = Math.min(5, Math.floor(areaFor / 650) + 1);

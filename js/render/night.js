@@ -341,11 +341,11 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.84 — LOAN POLISH', `
-    <p><b>The loan dashboard gets a proper look.</b></p>
-    <div class="kv"><span class="k">CREDIT SCORE</span><span class="v">a 300–850 gauge with colored bands and your marker</span></div>
-    <div class="kv"><span class="k">ESCALATION</span><span class="v">a six-step stepper and banner that run green, amber, orange, red-orange, red, crimson as a loan falls behind</span></div>
-    <div class="kv"><span class="k">LOAN CARDS</span><span class="v">repaid progress, key figures and a tidy repayment schedule</span></div>
+  openModal('Welcome to v2.85 — SHOPFRONTS', `
+    <p><b>Streets of shops stop repeating.</b></p>
+    <div class="kv"><span class="k">AWNINGS</span><span class="v">eight color schemes in striped, solid and scalloped styles, plus sign boards over some doors</span></div>
+    <div class="kv"><span class="k">NEIGHBORS</span><span class="v">each building starts on a different shop, so side-by-side blocks no longer match</span></div>
+    <div class="kv"><span class="k">ROOFS</span><span class="v">small roofs get a vent or cooling unit too</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }
