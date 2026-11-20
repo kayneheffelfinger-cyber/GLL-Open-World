@@ -341,11 +341,11 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.88 — TREE VARIETY', `
-    <p><b>The trees stop being one tree.</b></p>
-    <div class="kv"><span class="k">SHAPES</span><span class="v">round, conifer and tall oval crowns</span></div>
-    <div class="kv"><span class="k">COLOR</span><span class="v">a range of greens, and the odd autumn tree</span></div>
-    <div class="kv"><span class="k">SIZE</span><span class="v">small saplings up to a few big old trees</span></div>
+  openModal('Welcome to v2.89 — FOREST VARIETY', `
+    <p><b>The country between cities stops being one forest.</b></p>
+    <div class="kv"><span class="k">BIOMES</span><span class="v">broadleaf, boreal spruce, dry savanna and rare autumn woods in ragged patches</span></div>
+    <div class="kv"><span class="k">TREES</span><span class="v">spruces, tall ovals, flat-topped savanna crowns, birch trunks, a size range and a few giants</span></div>
+    <div class="kv"><span class="k">GROUND</span><span class="v">low undergrowth bushes in the woods</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }

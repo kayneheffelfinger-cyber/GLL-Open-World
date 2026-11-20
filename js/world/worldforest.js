@@ -62,6 +62,32 @@ export const WF = (() => {
   const LEAF = new THREE.IcosahedronGeometry(1.75, 0);
   const C_TRUNK = wcol(0x6b4f33), C_PINE = wcol(0x2f6b34),
         C_LEAF_A = wcol(0x3d7f36), C_LEAF_B = wcol(0x4c8f3e);
+  // v2.89 FOREST VARIETY: biomes (coarse, warped patches so there are no chunk-edge lines), more
+  // crown shapes (spruce, poplar, flat savanna tops), birch trunks, per-tree color jitter and
+  // undergrowth. Every new choice rides its own hash stream (vr) — the original rnd draws below are
+  // consumed exactly as before, so no tree moves.
+  const SPRUCE = new THREE.ConeGeometry(1.25, 4.4, 7), POPLAR = new THREE.IcosahedronGeometry(1.25, 0), BUSH = new THREE.IcosahedronGeometry(.7, 0);
+  const C_BIRCH = wcol(0xcfc8b6);
+  const BIOMES = [
+    { w: 30, pine: .42, leaf: [0x3d7f36, 0x4c8f3e, 0x468a3a].map(wcol), pcol: [0x2f6b34, 0x2a6030].map(wcol), size: 1, dens: 1, flat: 0, oval: .2 },        // 0 mixed (the old look)
+    { w: 28, pine: .08, leaf: [0x4c8f3e, 0x56a043, 0x3d7f36, 0x62a84a].map(wcol), pcol: [0x2f6b34].map(wcol), size: 1.05, dens: 1, flat: 0, oval: .22, birch: .12 }, // 1 broadleaf
+    { w: 22, pine: .9, leaf: [0x35703a].map(wcol), pcol: [0x28583a, 0x2f6b34, 0x244e35].map(wcol), size: 1.1, dens: 1.05, flat: 0, oval: 0, spruce: .7 },   // 2 boreal conifer
+    { w: 14, pine: .06, leaf: [0x7f8f3a, 0x8e9a45, 0x6f8238, 0x9aa14a].map(wcol), pcol: [0x4a6b34].map(wcol), size: .85, dens: .65, flat: 1, oval: 0 },     // 3 dry savanna
+    { w: 6, pine: .18, leaf: [0xc9783a, 0xd9a03a, 0xb8492f, 0x8f9a3a, 0x4c8f3e].map(wcol), pcol: [0x2f6b34].map(wcol), size: 1, dens: 1, flat: 0, oval: .15 }]; // 5 autumn mix
+  const _bcache = new Map();
+  function biomeAt(x, z) {
+    // a sine warp ragged-edges the 1200 m biome blocks
+    const xw = x + 260 * Math.sin(z / 310 + 1.3) + 120 * Math.sin(z / 97), zw = z + 260 * Math.sin(x / 270 + .4) + 120 * Math.sin(x / 89);
+    const bx = Math.floor(xw / 1200), bz = Math.floor(zw / 1200), k = bx + ',' + bz;
+    let b = _bcache.get(k);
+    if (b == null) {
+      let r = (hashStr('wb' + k) % 100), i = 0;
+      for (; i < BIOMES.length - 1; i++) { r -= BIOMES[i].w; if (r < 0) break; }
+      b = i; _bcache.set(k, b);
+    }
+    return BIOMES[b];
+  }
+  const jit = (c, f) => [c[0] * f, c[1] * f, c[2] * f];
 
   // micro merged-geometry builder — same contract as the WORLD closure's
   // GeoBuilder (local frame around ox/oz, vertex colors, one Lambert mesh)
@@ -132,16 +158,37 @@ export const WF = (() => {
 
   // the tree — the exact recipe the world's own addTree uses (unit
   // template geometries scaled by s ≡ the per-tree geometries it bakes)
-  function addTree(B, x, z, s, rnd) {
+  function addTree(B, x, z, s, rnd, vr) {
     if (nearCity(x, z) < BELT_PAST) return;                   // belt + cities keep their approved look (v2.65: per-city edge)
     if (WORLD.nearRoad(x, z, 8)) return;                      // off the asphalt, 8 m like every tree
     if (LANDGEO.ready && LANDGEO.isWaterWorld(x, z)) return;  // never at sea / never in a lake
     if (onPlot(x, z)) return;                                 // never on a roadside vendor plot
     const ry = rnd() * 3.14;
-    B.addGeo(TRUNK, trs(x, 1.1 * s, z, ry, s, s, s), C_TRUNK);
-    if (rnd() < .42) B.addGeo(PINE, trs(x, 3.6 * s, z, ry, s, s, s), C_PINE);
-    else B.addGeo(LEAF, trs(x, 3.1 * s, z, ry, s, .95 * s, s), rnd() < .5 ? C_LEAF_A : C_LEAF_B);
+    const pr = rnd(); if (pr >= .42) rnd();                   // keep the original rnd consumption (the layout must not move)
+    // v2.89: everything below is the new look, from the vr stream
+    const bm = biomeAt(x, z), v1 = vr(), v2 = vr(), v3 = vr(), v4 = vr();
+    s *= bm.size * (v4 > .965 ? 1.5 : .88 + v4 * .3);          // a wider range, a few giants
+    B.addGeo(TRUNK, trs(x, 1.1 * s, z, ry, s, s, s), bm.birch && v1 > .88 && v2 > .3 ? C_BIRCH : C_TRUNK);
+    if (v1 < bm.pine) {
+      const pc = jit(bm.pcol[Math.floor(v3 * bm.pcol.length) % bm.pcol.length], .9 + v4 * .2);
+      if (bm.spruce && v2 < bm.spruce) B.addGeo(SPRUCE, trs(x, 4.1 * s, z, ry, s, s, s), pc);   // tall narrow spruce
+      else B.addGeo(PINE, trs(x, 3.6 * s, z, ry, s, s, s), pc);
+    } else {
+      const lc = jit(bm.leaf[Math.floor(v3 * bm.leaf.length) % bm.leaf.length], .9 + v2 * .2);
+      if (bm.flat) B.addGeo(LEAF, trs(x, 3.0 * s, z, ry, 1.35 * s, .55 * s, 1.35 * s), lc);       // flat-topped savanna crown
+      else if (v2 < bm.oval) B.addGeo(POPLAR, trs(x, 3.5 * s, z, ry, s, 1.9 * s, s), lc);          // tall oval
+      else B.addGeo(LEAF, trs(x, 3.1 * s, z, ry, s, .95 * s, s), lc);
+    }
     trees++;
+  }
+  // low undergrowth: a squat bush; same guards as a tree, a little closer to roads allowed
+  function addBush(B, x, z, s, vr) {
+    if (nearCity(x, z) < BELT_PAST) return;
+    if (WORLD.nearRoad(x, z, 8)) return;
+    if (LANDGEO.ready && LANDGEO.isWaterWorld(x, z)) return;
+    if (onPlot(x, z)) return;
+    const bm = biomeAt(x, z), c = jit(bm.flat ? bm.leaf[1] : bm.leaf[Math.floor(vr() * bm.leaf.length) % bm.leaf.length], .78 + vr() * .2);
+    B.addGeo(BUSH, trs(x, .6 * s, z, vr() * 3.14, s * 1.3, s * .8, s * 1.3), c);
   }
 
   function build(cx, cz) {
@@ -160,7 +207,9 @@ export const WF = (() => {
     // v2.39c woodland density: ~263 trees per full chunk (one per ~30 m —
     // open woodland), wider character swing (.4-1.0) so thick woods meet
     // real clearings, leaner per-tree geometry keeps ~7k verts a chunk
-    const density = .4 + rnd() * .6;     // woodland character: thick woods ↔ open savanna
+    let density = .4 + rnd() * .6;     // woodland character: thick woods ↔ open savanna
+    const vr = _mulberry(hashStr('wv' + key));          // v2.89: the variety stream, separate from rnd
+    density *= biomeAt(xm, zm).dens;                    // drier country is sparser
     const B = GeoB(xm, zm);
     const stands = Math.max(4, Math.round((14 + rnd() * 10) * density * MOBF));
     for (let s = 0; s < stands; s++) {
@@ -168,11 +217,15 @@ export const WF = (() => {
       if (nearCity(sx, sz) < BELT_PAST + 160) continue;   // stand head past the belt edge
       const cnt = 9 + Math.floor(rnd() * 9);
       for (let i = 0; i < cnt; i++)
-        addTree(B, sx + (rnd() - .5) * 320, sz + (rnd() - .5) * 320, .8 + rnd() * .7, rnd);
+        addTree(B, sx + (rnd() - .5) * 320, sz + (rnd() - .5) * 320, .8 + rnd() * .7, rnd, vr);
     }
     const fill = Math.round((14 + rnd() * 16) * density * MOBF);
     for (let i = 0; i < fill; i++)
-      addTree(B, x0 + rnd() * CH, z0 + rnd() * CH, .6 + rnd() * .6, rnd);
+      addTree(B, x0 + rnd() * CH, z0 + rnd() * CH, .6 + rnd() * .6, rnd, vr);
+    if (B.count >= 6) {                  // v2.89 undergrowth — only in chunks that grew a wood
+      const nb = Math.round(fill * .45);
+      for (let i = 0; i < nb; i++) addBush(B, x0 + vr() * CH, z0 + vr() * CH, .7 + vr() * .6, vr);
+    }
     if (B.count < 6) return;
     const cg = new THREE.Group();
     cg.add(B.mesh());
