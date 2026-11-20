@@ -341,11 +341,11 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.94 — ROAD SURFACES', `
-    <p><b>Roads stop being one black ribbon.</b></p>
-    <div class="kv"><span class="k">SURFACES</span><span class="v">fresh, weathered, concrete and chip-seal roads, with brick or stone on pedestrian streets, and segments resurfaced a shade apart</span></div>
-    <div class="kv"><span class="k">WEAR</span><span class="v">repair patches and cracks</span></div>
-    <div class="kv"><span class="k">CROSSWALKS</span><span class="v">zebra, thin-bar, ladder and ochre school-style crossings</span></div>
+  openModal('Welcome to v2.95 — SKY', `
+    <p><b>Tilt the view and look up.</b></p>
+    <div class="kv"><span class="k">CLOUDS</span><span class="v">soft, flat-bottomed clouds drift slowly across the sky</span></div>
+    <div class="kv"><span class="k">SUN</span><span class="v">a warm glow where the sun is, in line with the shadows</span></div>
+    <div class="kv"><span class="k">HORIZON</span><span class="v">unchanged: the sea still meets the sky in one clean line</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }
