@@ -341,11 +341,11 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.92 — VEHICLE VARIETY', `
-    <p><b>The street is not one car.</b></p>
-    <div class="kv"><span class="k">KINDS</span><span class="v">sedans, hatchbacks, SUVs, pickups and vans parked at the curb and on the move</span></div>
-    <div class="kv"><span class="k">BUSES</span><span class="v">long transit buses on the arterials, queued with proper gaps</span></div>
-    <div class="kv"><span class="k">COLORS</span><span class="v">a wider paint range, with white and gray vans and colored buses</span></div>
+  openModal('Welcome to v2.93 — SHORELINE', `
+    <p><b>Water edges get some life.</b></p>
+    <div class="kv"><span class="k">REEDS</span><span class="v">clumps of reeds standing in the shallows along coasts, lakes and rivers</span></div>
+    <div class="kv"><span class="k">ROCKS</span><span class="v">rock clusters on the bank</span></div>
+    <div class="kv"><span class="k">PIERS</span><span class="v">a few wooden piers reaching out over open water</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }

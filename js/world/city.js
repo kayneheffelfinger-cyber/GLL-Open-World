@@ -1438,6 +1438,120 @@ export const CITY = (() => {
   }
 
   // ---------- street furniture + parked cars ------------------------
+  // ---------- v2.93 SHORELINE DETAIL: reeds, rocks and a few piers ----------
+  // Shore points come from two places: the land mask (a coarse grid scan around the anchor, each
+  // land/water edge refined by bisection) and the edges of any imported OSM water polygon. On those
+  // points: reed clumps, rock clusters and a handful of wooden piers — all instanced, all kept off
+  // streets, buildings and vendor plots, all from their own hash stream (nothing else shifts).
+  let shoreRec = null;
+  function buildShore(city) {
+    shoreRec = { pts: 0, reeds: 0, rocks: 0, piers: 0 };
+    const rnd = _mulberry(hashStr('sh' + (city.key || city.name)));
+    const ax = cityAnchor ? cityAnchor.x : 0, az = cityAnchor ? cityAnchor.z : 0;
+    const wet = LANDGEO.ready ? (x, z) => LANDGEO.isWaterWorld(x, z) : () => false;
+    const pts = [], seen = new Set();
+    const addPt = (x, z, dx, dz) => {                        // (x,z) = the waterline, (dx,dz) = unit toward the water
+      const k = Math.round(x / 12) + ',' + Math.round(z / 12);
+      if (seen.has(k)) return; seen.add(k);
+      pts.push([x, z, dx, dz]);
+    };
+    // A. the land mask: scan a 36 m grid, find land cells that touch water, bisect to the waterline
+    if (LANDGEO.ready) {
+      const R = 700, S = 36, N = Math.floor(R * 2 / S);
+      const water = [];
+      for (let i = 0; i <= N; i++) { water[i] = []; for (let j = 0; j <= N; j++) water[i][j] = wet(ax - R + i * S, az - R + j * S); }
+      for (let i = 1; i < N; i++) for (let j = 1; j < N; j++) {
+        if (water[i][j]) continue;
+        let wx = 0, wz = 0, nw = 0;
+        for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) if ((di || dj) && water[i + di][j + dj]) { wx += di; wz += dj; nw++; }
+        if (!nw) continue;
+        const cx = ax - R + i * S, cz = az - R + j * S, l = Math.hypot(wx, wz) || 1;
+        let lo = [cx, cz], hi = [cx + wx / l * S * 1.2, cz + wz / l * S * 1.2];
+        if (!wet(hi[0], hi[1])) continue;
+        for (let it = 0; it < 5; it++) { const m = [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2]; if (wet(m[0], m[1])) hi = m; else lo = m; }
+        addPt(lo[0], lo[1], wx / l, wz / l);
+      }
+    }
+    // B. imported water polygons: points along every edge, pushed to whichever side is land
+    for (const w of city.waters || []) {
+      const P = w.poly; if (!P || P.length < 3) continue;
+      for (let i = 0; i < P.length; i++) {
+        const A = P[i], B = P[(i + 1) % P.length], L = Math.hypot(B[0] - A[0], B[1] - A[1]);
+        if (L < 6) continue;
+        const ux = (B[0] - A[0]) / L, uz = (B[1] - A[1]) / L, nx = -uz, nz = ux;
+        for (let d = 4; d < L; d += 22) {
+          const x = A[0] + ux * d, z = A[1] + uz * d;
+          const inA = inPoly(x + nx * 3, z + nz * 3, P);
+          addPt(x, z, inA ? nx : -nx, inA ? nz : -nz);
+        }
+      }
+    }
+    shoreRec.pts = pts.length;
+    if (!pts.length) return;
+    const clear = (x, z) => { if (pointInBuilding(x, z) || plotAt(x, z)) return false; const h = distToRoad(x, z); return !(h.rd && h.d <= h.rd.w / 2 + 1.2); };   // water allowed (reeds stand in it)
+    const ok = (x, z) => clear(x, z) && !wet(x, z);                                                                                                 // dry land only (rocks, pier root)
+    const mobF = isMob ? .5 : 1;
+    const reeds = [], rocks = [], piers = [];
+    for (const [x, z, dx, dz] of pts) {
+      const tx = -dz, tz = dx;                                // along the shore
+      if (rnd() < .55) {                                      // a reed clump just inside the water's edge
+        const o = .4 + rnd() * 1.4, t = (rnd() - .5) * 8, rx = x + dx * o + tx * t, rz = z + dz * o + tz * t;
+        if (clear(rx, rz)) reeds.push([rx, rz, rnd()]);
+      }
+      if (rnd() < .22) {                                      // rocks on the bank
+        const o = -(.6 + rnd() * 2.2), t = (rnd() - .5) * 8, kx = x + dx * o + tx * t, kz = z + dz * o + tz * t;
+        if (ok(kx, kz)) { const nk = 1 + Math.floor(rnd() * 3); for (let k = 0; k < nk; k++) rocks.push([kx + (rnd() - .5) * 2.2, kz + (rnd() - .5) * 2.2, rnd(), rnd(), rnd()]); }
+      }
+      if (piers.length < 10 && rnd() < .035 && LANDGEO.ready) {   // a pier where there is room for one
+        const sx = x - dx * 1.2, sz = z - dz * 1.2, ex = x + dx * 7.5, ez = z + dz * 7.5;
+        if (!wet(sx, sz) && wet(ex, ez) && wet(x + dx * 4, z + dz * 4) && ok(sx, sz) && !piers.some(p => Math.hypot(p[0] - x, p[1] - z) < 110)) piers.push([x, z, dx, dz]);
+      }
+    }
+    const reedN = Math.min(reeds.length, Math.floor(360 * mobF)), rockN = Math.min(rocks.length, Math.floor(200 * mobF));
+    const mat4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), c = new THREE.Color();
+    if (reedN) {                                              // three leaning blades per clump
+      const blade = new THREE.InstancedMesh(new THREE.ConeGeometry(.1, 1.6, 3), new THREE.MeshLambertMaterial({ color: 0xffffff }), reedN * 5);
+      const RC = [0x8a9a4a, 0x6f8a3e, 0xa8a45a, 0x7a8f4a, 0xb0a060];
+      for (let i = 0; i < reedN; i++) {
+        const [x, z, r] = reeds[i];
+        for (let b = 0; b < 5; b++) {
+          const ang = r * 6.28 + b * 1.26, off = .2 + (b % 3) * .2, h = 1 + ((r * 7 + b * .37) % 1) * 1.4;
+          e.set((((r * 13 + b) % 1) - .5) * .45, 0, (((r * 29 + b) % 1) - .5) * .45); q.setFromEuler(e);
+          mat4.compose(new THREE.Vector3(x + Math.cos(ang) * off - AX, .05 + .8 * h, z + Math.sin(ang) * off - AZ), q, new THREE.Vector3(1.2, h, 1.2));
+          blade.setMatrixAt(i * 5 + b, mat4);
+          blade.setColorAt(i * 5 + b, c.set(RC[(Math.floor(r * RC.length) + b) % RC.length]));
+        }
+      }
+      blade.position.set(AX, 0, AZ); group.add(blade); shoreRec.reeds = reedN;
+    }
+    if (rockN) {
+      const rock = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.5, 0), new THREE.MeshLambertMaterial({ color: 0xffffff }), rockN);
+      const KC = [0x8a8680, 0x77746e, 0x9a948a, 0x6f6a62];
+      for (let i = 0; i < rockN; i++) {
+        const [x, z, a, b, k] = rocks[i], sx = 1.3 + a * 1.9, sy = .7 + b * .8, sz = 1.1 + k * 1.5;
+        e.set(0, a * 6.28, 0); q.setFromEuler(e);
+        mat4.compose(new THREE.Vector3(x - AX, .1 + sy * .12, z - AZ), q, new THREE.Vector3(sx, sy, sz));
+        rock.setMatrixAt(i, mat4); rock.setColorAt(i, c.set(KC[Math.floor(k * KC.length) % KC.length]));
+      }
+      rock.castShadow = true; rock.position.set(AX, 0, AZ); group.add(rock); shoreRec.rocks = rockN;
+    }
+    if (piers.length) {
+      const deck = new THREE.InstancedMesh(new THREE.BoxGeometry(2.2, .16, 8.7), new THREE.MeshLambertMaterial({ color: 0x9a7650 }), piers.length);
+      const post = new THREE.InstancedMesh(new THREE.BoxGeometry(.22, 1.6, .22), new THREE.MeshLambertMaterial({ color: 0x5a4632 }), piers.length * 6);
+      piers.forEach(([x, z, dx, dz], i) => {
+        const th = Math.atan2(dx, dz); q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), th);
+        const cx = x + dx * 3.1, cz = z + dz * 3.1;                     // deck centre: 1.2 m on land .. 7.5 m out
+        mat4.compose(new THREE.Vector3(cx - AX, 1.02, cz - AZ), q, new THREE.Vector3(1, 1, 1)); deck.setMatrixAt(i, mat4);   // lakes sit at .8 m — the deck clears them
+        let pi = 0;
+        for (const along of [-3.6, 0, 3.6]) for (const side of [-.98, .98]) {
+          const px = cx + dx * along + (-dz) * side, pz = cz + dz * along + dx * side;
+          mat4.compose(new THREE.Vector3(px - AX, .6, pz - AZ), q.identity(), new THREE.Vector3(1, 1.15, 1)); post.setMatrixAt(i * 6 + pi++, mat4);
+        }
+      });
+      deck.castShadow = true; deck.position.set(AX, 0, AZ); post.position.set(AX, 0, AZ); group.add(deck, post); shoreRec.piers = piers.length;
+    }
+  }
+
   function buildProps(city) {
     const rnd = _mulberry(hashStr('P' + (city.key || city.name)));
     const mobF = isMob ? .5 : 1;
@@ -3426,6 +3540,7 @@ export const CITY = (() => {
       buildGreensWater(shifted);  // pond only out here
       onStatus && onStatus('Growing the pastures…'); await _tick();
       buildProps(shifted);
+      try { buildShore(shifted); } catch (e) { console.error('[shore]', e); }   // v2.93
       buildPastureExtras(shifted);
       buildHills();
       return group;
@@ -3495,6 +3610,7 @@ export const CITY = (() => {
     buildGreensWater(shifted);
     onStatus && onStatus('Parking cars & street furniture…'); await _tick();
     buildProps(shifted);
+    try { buildShore(shifted); } catch (e) { console.error('[shore]', e); }   // v2.93 SHORELINE DETAIL
     // v2.16 CLEAN HORIZON: no fake backdrop skyline — beyond the city's
     // ground plane the real one world (country, roads, distant cities)
     // takes over, exactly as the player asked.
@@ -3516,6 +3632,7 @@ export const CITY = (() => {
     group = null; roads = []; plotRecs = []; suites = []; buildingPolys = []; benchScratch = []; pitchedRects = []; bHash = rHash = null; treeList = []; treeStats = null;
     gates = [];   // v2.14
     suburbRec = null; suburbGroup = null;   // v2.42
+    shoreRec = null;                        // v2.93
     cityRec = null; cityAnchor = null;   // v2.15: no stale city state after dispose
   }
   let _winMat = null;
@@ -3582,6 +3699,7 @@ export const CITY = (() => {
     get rec() { return cityRec; },
     get anchor() { return cityAnchor; },
     get buildingPolys() { return buildingPolys; },   // v2.21: world-space, water-filtered — the dense-core spawn reads this
+    get shore() { return shoreRec; },                // v2.93: the shoreline census (pts/reeds/rocks/piers)
     get suburb() { return suburbRec; },              // v2.42: the neighborhood census (houses/verts/trees…)
     get suburbGroup() { return suburbGroup; },       // v2.42: distance-LOD host
     get dna() { return cityRec ? cityDNA(cityRec) : null; },   // v2.65: the standing city's DNA (QA)
