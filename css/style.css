@@ -687,3 +687,60 @@ table.menu td.m{font-family:var(--mono);color:var(--green)}
 #bk-body{display:flex;flex-direction:column;gap:10px}
 .bk-bal{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--green2)}
 .bk-stmt b:last-child{font-family:var(--mono);white-space:nowrap}
+/* v2.82 bank polish — all original: card faces, credit-use bar, ledger and statement grids */
+.bk-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.bk-sum>div{padding:9px 11px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid var(--line2);min-width:0}
+.bk-sum span{display:block;font-size:9px;letter-spacing:1.5px;font-weight:700;color:var(--dim)}
+.bk-sum b{display:block;font-family:var(--mono);font-size:14.5px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bk-sum b.r{color:#FCA5A5}
+.bk-sum .bk-net{background:rgba(56,189,248,.08);border-color:rgba(56,189,248,.28)}
+.bk-sum .bk-net b{color:var(--green2);font-size:15.5px}
+.bk-clock{margin:-2px 2px 0;text-align:right}
+.bk-tags{display:flex;gap:5px;margin-top:4px}
+.bk-tag{font-style:normal;font-size:8.5px;font-weight:800;letter-spacing:1.1px;padding:2px 6px;border-radius:5px;background:rgba(56,189,248,.14);color:#7DD3FC}
+.bk-tag.gold{background:rgba(245,204,116,.15);color:#F5CC74}
+.bk-bal{font-size:17px}
+.bk-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:2px 0 8px}
+.bk-card{position:relative;aspect-ratio:1.586;min-height:112px;border-radius:14px;padding:11px 13px;display:flex;flex-direction:column;justify-content:space-between;color:#fff;overflow:hidden;
+  background:linear-gradient(135deg,hsl(var(--h) 50% 30%),hsl(calc(var(--h) + 35) 55% 15%));border:1px solid rgba(255,255,255,.14);box-shadow:0 6px 16px rgba(0,0,0,.35)}
+.bk-card::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 80% at 100% 0%,rgba(255,255,255,.14),transparent 55%);pointer-events:none}
+.bk-card.credit{background:linear-gradient(135deg,#2b2417,#0f0d09 70%);border-color:rgba(245,204,116,.4)}
+.bk-card.credit .bk-chip{background:linear-gradient(135deg,#f5cc74,#b98d2e)}
+.bk-card.on{border-color:var(--green2);box-shadow:0 0 0 2px rgba(72,187,120,.35),0 6px 16px rgba(0,0,0,.35)}
+.bk-ctop{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.bk-ctype{font-size:9.5px;letter-spacing:2px;font-weight:800;opacity:.85}
+.bk-cuse{font-size:8px;letter-spacing:1px;font-weight:800;padding:2px 6px;border-radius:999px;background:rgba(72,187,120,.25);color:#9AE6B4}
+.bk-chip{width:26px;height:19px;border-radius:5px;background:linear-gradient(135deg,#d6dbe0,#8d97a1);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+.bk-cnum{font-family:var(--mono);font-size:12.5px;letter-spacing:1.5px;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.bk-cfoot{display:flex;justify-content:space-between;gap:8px;font-size:9.5px;opacity:.85}
+.bk-cfoot span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bk-cbank{position:absolute;right:12px;top:30px;font-size:8px;letter-spacing:.8px;opacity:.55;max-width:55%;text-align:right;text-transform:uppercase}
+.bk-card.empty{align-items:center;justify-content:center;gap:8px;background:rgba(255,255,255,.025);border:1px dashed var(--line2);box-shadow:none}
+.bk-card.empty::after{display:none}
+.bk-card.empty span{font-size:9.5px;letter-spacing:1.6px;font-weight:700;color:var(--dim)}
+.bk-use{margin:2px 0 6px}
+.bk-bar{height:8px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden}
+.bk-bar i{display:block;height:100%;border-radius:999px}
+.bk-bar i.u0{background:linear-gradient(90deg,#38A169,#48BB78)}.bk-bar i.u1{background:linear-gradient(90deg,#D69E2E,#F6AD55)}.bk-bar i.u2{background:linear-gradient(90deg,#E53E3E,#FC8181)}
+.bk-uleg{display:flex;justify-content:space-between;font-size:10px;color:var(--dim);margin-top:3px;font-family:var(--mono)}
+.co-card .v.amber,.bk-stats .amber{color:#F6AD55}
+#bk-method{width:100%;padding:9px 10px;font-size:13px}
+.bk-led{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.bk-led:last-child{border-bottom:0}
+.bk-led b:last-child{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+.bk-led b:first-child,.bk-led div b{text-transform:capitalize;font-size:12.5px}
+.bk-led .co-sub.inl{display:inline;text-transform:none;font-weight:400}
+.bk-led .g{color:var(--green2)}.bk-led .r{color:#FCA5A5}
+.bk-day{font-family:var(--mono);font-size:10px;color:var(--dim);background:rgba(255,255,255,.05);border-radius:6px;padding:3px 0;text-align:center}
+.bk-stm{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)}.bk-stm:last-child{border-bottom:0}
+.bk-sh{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.bk-close{font-family:var(--mono);font-size:15px;white-space:nowrap}
+.bk-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:6px;margin-top:7px}
+.bk-stats>div{padding:6px 8px;border-radius:8px;background:rgba(255,255,255,.035)}
+.bk-stats span{display:block;font-size:8.5px;letter-spacing:1.3px;color:var(--dim);font-weight:700}
+.bk-stats b{display:block;font-family:var(--mono);font-size:12px;margin-top:2px}
+.bk-stats .g{color:var(--green2)}.bk-stats .r{color:#FCA5A5}
+@media(max-width:560px){.bk-sum{grid-template-columns:1fr 1fr}.bk-cards{grid-template-columns:1fr}}
+.co-row select#bk-from,.co-row select#bk-to{flex:1 1 0;min-width:0}
+#bk-body .co-row>.co-sub{flex:0 0 auto}
+.co-row select#bk-from,.co-row select#bk-to{font-size:12px}

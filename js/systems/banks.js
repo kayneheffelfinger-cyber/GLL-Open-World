@@ -252,7 +252,7 @@ export const BANK = (() => {
   function render() {
     const el = document.getElementById('bk-body'); if (!el) return;
     const b = B(), tabs = [['accounts', 'ACCOUNTS'], ['transfer', 'TRANSFER'], ['cards', 'CARDS'], ['statements', 'STATEMENTS'], ['ledger', 'LEDGER']];
-    let h = '<div class="co-wallet"><div><span class="k">CASH</span> <b>' + fmt$(STATE.money) + '</b><span class="co-sub"> · in banks ' + fmt$(assets()) + ' · owed on cards ' + fmt$(owed()) + ' · <b>net ' + fmt$(net()) + '</b></span></div><div class="co-sub">game day ' + day() + ' · month ' + (Math.floor(day() / MONTH) + 1) + '</div></div>' +
+    let h = '<div class="bk-sum"><div><span>CASH</span><b>' + fmt$(STATE.money) + '</b></div><div><span>IN BANKS</span><b>' + fmt$(assets()) + '</b></div><div><span>OWED ON CARDS</span><b class="' + (owed() > 0 ? 'r' : '') + '">' + fmt$(owed()) + '</b></div><div class="bk-net"><span>NET WORTH</span><b>' + fmt$(net()) + '</b></div></div><div class="co-sub bk-clock">game day ' + day() + ' · month ' + (Math.floor(day() / MONTH) + 1) + '</div>' +
       '<div class="co-tabs">' + tabs.map(t => '<button class="co-tab' + (panelTab === t[0] ? ' on' : '') + '" data-bk="tab" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>';
     h += ({ accounts: accountsHTML, transfer: transferHTML, cards: cardsHTML, statements: statementsHTML, ledger: ledgerHTML }[panelTab] || accountsHTML)();
     if (el.dataset.h === h) return;
@@ -264,7 +264,7 @@ export const BANK = (() => {
     const free = CITIES.filter(c => !have.has(c.key)).sort((a, b) => a.name.localeCompare(b.name));
     const here = STATE.lastCityKey && !have.has(STATE.lastCityKey) ? STATE.lastCityKey : (free[0] || {}).key;
     return '<div class="co-card"><div class="msec">Your accounts</div>' + (A.length ? A.map(a =>
-      '<div class="co-item"><div><b>' + esc(a.name) + '</b><span class="co-sub">opened ' + dstr(a.opened) + (B().debit[a.id] ? ' · 💳 debit' : '') + (B().cc[a.id] ? ' · 💳 credit' : '') + '</span></div><div class="bk-bal">' + fmt$(a.bal) + '</div></div>' +
+      '<div class="co-item"><div><b>' + esc(a.name) + '</b><span class="co-sub">opened ' + dstr(a.opened) + '</span><span class="bk-tags">' + (B().debit[a.id] ? '<i class="bk-tag">DEBIT</i>' : '') + (B().cc[a.id] ? '<i class="bk-tag gold">CREDIT</i>' : '') + '</span></div><div class="bk-bal">' + fmt$(a.bal) + '</div></div>' +
       '<div class="co-row"><input id="bk-amt-' + a.id + '" type="number" min="1" step="1" placeholder="amount"><button class="tpbtn" data-bk="dep" data-v="' + a.id + '">DEPOSIT</button><button class="tpbtn" data-bk="wd" data-v="' + a.id + '">WITHDRAW</button><button class="tpbtn" data-bk="close" data-v="' + a.id + '">CLOSE</button></div>').join('') : '<p class="co-sub">No accounts yet. Open one at any city\'s bank below.</p>') + '</div>' +
       '<div class="co-card"><div class="msec">Open an account</div><div class="co-row"><select id="bk-city">' + free.map(c => '<option value="' + c.key + '"' + (c.key === here ? ' selected' : '') + '>' + esc(bankName(c.key)) + '</option>').join('') + '</select><button class="tpbtn" data-bk="open">OPEN</button></div><p class="co-sub">One bank per city, one account per bank. Free to open. Balances earn 0.30% a month and count toward your net worth.</p></div>';
   }
@@ -275,30 +275,42 @@ export const BANK = (() => {
     return '<div class="co-card"><div class="msec">Transfer</div><div class="co-row"><select id="bk-from">' + from + '</select><span class="co-sub">→</span><select id="bk-to">' + to + '</select></div><div class="co-row"><input id="bk-xamt" type="number" min="1" step="1" placeholder="amount"><button class="tpbtn" data-bk="xfer">TRANSFER</button></div>' +
       '<p class="co-sub">Between your own accounts at different city banks — ' + fmt$(XFER_FEE) + ' flat fee. ' + (co ? 'The company bank is available because your company is enabled; moving money out of it needs the withdraw permission.' : '') + ' Transfers to other players are not possible.</p></div>';
   }
+  // v2.82: a card face (cosmetic — the last four digits are a hash of the account id, not data)
+  function cardFace(a, kind, on, foot) {
+    let hh = 7; for (const ch of a.cityKey) hh = (hh * 31 + ch.charCodeAt(0)) % 360;
+    let n = 17; for (const ch of a.id + kind) n = (n * 131 + ch.charCodeAt(0)) % 10000;
+    return '<div class="bk-card ' + kind + (on ? ' on' : '') + '" style="--h:' + hh + '"><div class="bk-ctop"><span class="bk-ctype">' + (kind === 'debit' ? 'DEBIT' : 'CREDIT') + '</span>' + (on ? '<span class="bk-cuse">PAYING WITH THIS</span>' : '') + '</div>' +
+      '<div class="bk-chip"></div><div class="bk-cnum">•••• •••• •••• ' + String(n).padStart(4, '0') + '</div>' +
+      '<div class="bk-cfoot"><span>' + esc(STATE.name || 'Tycoon') + '</span><span>' + esc(foot) + '</span></div><div class="bk-cbank">' + esc(bankName(a.cityKey)) + '</div></div>';
+  }
   function cardsHTML() {
     const A = accts(), b = B();
     const meth = [['cash', 'Cash']].concat(A.filter(a => b.debit[a.id]).map(a => ['debit:' + a.id, 'Debit · ' + a.name])).concat(Object.keys(b.cc).map(id => ['credit:' + id, 'Credit · ' + bankName(id.slice(2))]));
     let h = '<div class="co-card"><div class="msec">Pay with</div><div class="co-row"><select id="bk-method" data-bk="method">' + meth.map(m => '<option value="' + m[0] + '"' + (m[0] === b.method ? ' selected' : '') + '>' + esc(m[1]) + '</option>').join('') + '</select></div><p class="co-sub">Plots, carts, builds, machines, generators and the other purchases the game makes through its checkout use this card. Wages and utility bills still come out of cash. A card that cannot cover a purchase falls back to cash.</p></div>';
     h += A.length ? A.map(a => {
       const c = b.cc[a.id];
-      return '<div class="co-card"><div class="msec">' + esc(a.name) + '</div>' +
-        '<div class="co-item"><span>💳 Debit card</span>' + (b.debit[a.id] ? '<span class="co-sub">issued · spends from ' + fmt$(a.bal) + '</span>' : '<button class="tpbtn" data-bk="debit" data-v="' + a.id + '">GET DEBIT CARD</button>') + '</div>' +
-        (c ? '<div class="kv"><span class="k">CREDIT LIMIT</span><span class="v">' + fmt$(c.limit) + '</span></div><div class="kv"><span class="k">OWED</span><span class="v ' + (c.owed > 0 ? 'r' : 'g') + '">' + fmt$(c.owed) + '</span></div><div class="kv"><span class="k">AVAILABLE</span><span class="v">' + fmt$(Math.max(0, c.limit - c.owed)) + '</span></div>' +
-          (c.stmt && c.stmt.minDue > 0 && !c.stmt.settled ? '<div class="kv"><span class="k">MINIMUM DUE</span><span class="v ' + (day() > c.stmt.dueDay ? 'r' : '') + '">' + fmt$(Math.max(0, c.stmt.minDue - c.stmt.paidSince)) + ' by day ' + c.stmt.dueDay + '</span></div>' : '') +
-          '<div class="co-row"><input id="bk-cc-' + a.id + '" type="number" min="1" step="1" placeholder="payment"><button class="tpbtn" data-bk="ccpay" data-v="' + a.id + '">PAY FROM ACCOUNT</button><button class="tpbtn" data-bk="ccpaycash" data-v="' + a.id + '">PAY IN CASH</button></div>'
-          : '<div class="co-item"><span>💳 Credit card</span><button class="tpbtn" data-bk="credit" data-v="' + a.id + '">APPLY · ' + fmt$(limitFor(a.id)) + ' LIMIT</button></div>') + '</div>';
+      const dOn = b.method === 'debit:' + a.id, cOn = b.method === 'credit:' + a.id;
+      const use = c ? Math.min(100, Math.round(c.owed / Math.max(1, c.limit) * 100)) : 0;
+      return '<div class="co-card"><div class="msec">' + esc(a.name) + '</div><div class="bk-cards">' +
+        (b.debit[a.id] ? cardFace(a, 'debit', dOn, 'spends from ' + fmt$(a.bal)) : '<div class="bk-card empty"><span>DEBIT CARD</span><button class="tpbtn" data-bk="debit" data-v="' + a.id + '">GET DEBIT CARD</button></div>') +
+        (c ? cardFace(a, 'credit', cOn, fmt$(Math.max(0, c.limit - c.owed)) + ' available') : '<div class="bk-card empty"><span>CREDIT CARD</span><button class="tpbtn" data-bk="credit" data-v="' + a.id + '">APPLY · ' + fmt$(limitFor(a.id)) + ' LIMIT</button></div>') + '</div>' +
+        (c ? '<div class="bk-use"><div class="bk-bar"><i class="u' + (use < 40 ? 0 : use < 75 ? 1 : 2) + '" style="width:' + use + '%"></i></div><div class="bk-uleg"><span>' + use + '% of limit used</span><span>limit ' + fmt$(c.limit) + '</span></div></div>' +
+          '<div class="kv"><span class="k">OWED</span><span class="v ' + (c.owed > 0 ? 'r' : 'g') + '">' + fmt$(c.owed) + '</span></div><div class="kv"><span class="k">AVAILABLE</span><span class="v">' + fmt$(Math.max(0, c.limit - c.owed)) + '</span></div>' +
+          (c.stmt && c.stmt.minDue > 0 && !c.stmt.settled ? '<div class="kv"><span class="k">MINIMUM DUE</span><span class="v ' + (day() > c.stmt.dueDay ? 'r' : 'amber') + '">' + fmt$(Math.max(0, c.stmt.minDue - c.stmt.paidSince)) + ' by day ' + c.stmt.dueDay + (day() > c.stmt.dueDay ? ' · OVERDUE' : '') + '</span></div>' : '') +
+          '<div class="co-row"><input id="bk-cc-' + a.id + '" type="number" min="1" step="1" placeholder="payment"><button class="tpbtn" data-bk="ccpay" data-v="' + a.id + '">PAY FROM ACCOUNT</button><button class="tpbtn" data-bk="ccpaycash" data-v="' + a.id + '">PAY IN CASH</button></div>' : '') + '</div>';
     }).join('') : '<div class="co-card"><p>Open an account to get cards.</p></div>';
     return h + '<p class="co-sub">Credit cards: statement each month (minimum 5% or $25, due 10 days later). Miss the minimum: $25 late fee. Not paid in full: 2% a month on the rest.</p>';
   }
   function statementsHTML() {
     const S = B().stmts.slice().reverse();
+    const st = (k, v, cls) => '<div><span>' + k + '</span><b' + (cls ? ' class="' + cls + '"' : '') + '>' + v + '</b></div>';
     return '<div class="co-card"><div class="msec">Monthly statements</div>' + (S.length ? S.map(s => s.kind === 'account'
-      ? '<div class="co-item bk-stmt"><div><b>' + esc(s.name) + '</b><span class="co-sub">month ' + s.month + ' · opened ' + fmt$(s.open) + ' · in ' + fmt$(s.in) + ' · out ' + fmt$(s.out) + ' · interest ' + fmt$(s.int) + ' · fees ' + fmt$(s.fee) + '</span></div><b>' + fmt$(s.close) + '</b></div>'
-      : '<div class="co-item bk-stmt"><div><b>' + esc(s.name) + '</b><span class="co-sub">month ' + s.month + ' · purchases ' + fmt$(s.purchases) + ' · payments ' + fmt$(s.payments) + ' · minimum ' + fmt$(s.minDue) + ' due day ' + s.dueDay + ' · limit ' + fmt$(s.limit) + '</span></div><b>' + fmt$(s.close) + ' owed</b></div>').join('') : '<p class="co-sub">The first statements arrive when game day ' + MONTH + ' closes (about 45 minutes of play).</p>') + '</div>';
+      ? '<div class="bk-stm"><div class="bk-sh"><div><b>' + esc(s.name) + '</b><span class="co-sub">month ' + s.month + ' · account</span></div><b class="bk-close">' + fmt$(s.close) + '</b></div><div class="bk-stats">' + st('OPENED', fmt$(s.open)) + st('IN', fmt$(s.in), 'g') + st('OUT', fmt$(s.out), 'r') + st('INTEREST', fmt$(s.int), 'g') + st('FEES', fmt$(s.fee), s.fee > 0 ? 'r' : '') + '</div></div>'
+      : '<div class="bk-stm card"><div class="bk-sh"><div><b>' + esc(s.name) + '</b><span class="co-sub">month ' + s.month + ' · credit card</span></div><b class="bk-close r">' + fmt$(s.close) + ' owed</b></div><div class="bk-stats">' + st('PURCHASES', fmt$(s.purchases)) + st('PAYMENTS', fmt$(s.payments), 'g') + st('MINIMUM', fmt$(s.minDue) + ' · day ' + s.dueDay, 'amber') + st('LIMIT', fmt$(s.limit)) + '</div></div>').join('') : '<p class="co-sub">The first statements arrive when game day ' + MONTH + ' closes (about 45 minutes of play).</p>') + '</div>';
   }
   function ledgerHTML() {
     const L = B().ledger.slice(-60).reverse();
-    return '<div class="co-card"><div class="msec">Ledger — every movement</div>' + (L.length ? L.map(e => '<div class="co-led"><span class="co-sub">day ' + e.day + ' · ' + esc(lineName(e.line)) + '</span><span>' + esc(e.type.replace(/_/g, ' ')) + (e.memo ? ' · ' + esc(e.memo) : '') + '</span><b class="' + ((e.line.slice(0, 3) === 'cc_' ? e.amt > 0 : e.amt < 0) ? 'r' : 'g') + '">' + (e.amt < 0 ? '-' : '+') + fmt$(Math.abs(e.amt)) + '</b></div>').join('') : '<p class="co-sub">No movements yet.</p>') + '</div>';
+    return '<div class="co-card"><div class="msec">Ledger — every movement</div>' + (L.length ? L.map(e => '<div class="bk-led"><span class="bk-day">D' + e.day + '</span><div><b>' + esc(e.type.replace(/_/g, ' ')) + (e.memo ? '<span class="co-sub inl"> · ' + esc(e.memo) + '</span>' : '') + '</b><span class="co-sub">' + esc(lineName(e.line)) + '</span></div><b class="' + ((e.line.slice(0, 3) === 'cc_' ? e.amt > 0 : e.amt < 0) ? 'r' : 'g') + '">' + (e.amt < 0 ? '-' : '+') + fmt$(Math.abs(e.amt)) + '</b></div>').join('') : '<p class="co-sub">No movements yet.</p>') + '</div>';
   }
   const lineName = l => l.slice(0, 3) === 'cc_' ? bankName(l.slice(5)) + ' card' : bankName(l.slice(2));
   function wire(root) {
