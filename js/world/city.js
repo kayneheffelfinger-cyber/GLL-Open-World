@@ -719,7 +719,7 @@ export const CITY = (() => {
     buildingPolys = [];
     pitchedRects = [];
     const rnd = _mulberry(hashStr('b' + (city.key || city.name)));
-    let si = 0, nTier = 0, nPainted = 0, nBld = 0;   // v2.88: painted-wall census (QA)
+    let si = 0, nTier = 0, nPainted = 0, nBld = 0; const paintedAt = [];   // v2.88: painted-wall census (QA)
     let tallest = null;   // v2.64: the skyline crown — track the tallest building
     const tintsUsed = [], roofsUsed = [];
 
@@ -953,7 +953,7 @@ export const CITY = (() => {
         const bt = b.t && b.t.building;
         const civic = bt && /^(commercial|office|industrial|retail|warehouse|hospital|school|university|civic|public|government|hotel|church|cathedral|train_station|stadium)$/.test(bt);
         if (!civic && _mulberry(hashStr('pw' + b.bkey))() < .4) {
-          painted = true; nPainted++;
+          painted = true; nPainted++; if (paintedAt.length < 12) paintedAt.push([cx, cz, Math.round(h)]);
           const pc = _mulberry(hashStr('pc' + b.bkey));
           let pcol = colOf(PAINT[Math.floor(pc() * PAINT.length)]);
           if (reg && reg.warm && pc() < .55) pcol = pcol.lerp(colOf(reg.warm[Math.floor(pc() * reg.warm.length)]), .3);   // the region's own palette pulls the paint its way
@@ -1185,7 +1185,7 @@ export const CITY = (() => {
       group.add(inst, tip);
     }
     buildStats = {
-      pitched: pitchedRects.length, tiered: nTier, suites: suites.length, painted: nPainted, buildings: nBld,   // v2.88: painted-wall census
+      pitched: pitchedRects.length, tiered: nTier, suites: suites.length, painted: nPainted, buildings: nBld, paintedAt,   // v2.88: painted-wall census
       wallStyleVerts: wallArrs.map(a => a.pos.length / 3 | 0),
       pitchedVerts: pitched.pos.length / 3 | 0,
       trimVerts: trim.pos.length / 3 | 0,
