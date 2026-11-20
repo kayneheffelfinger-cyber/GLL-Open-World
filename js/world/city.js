@@ -141,7 +141,7 @@ export const CITY = (() => {
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
       const r = _ihash(x, y, 91 + variant * 17);
       const wx = x * S, wy = y * S;
-      joint(x, y); belt(x, y);
+      if (variant !== 6) { joint(x, y); belt(x, y); }   // v2.88: painted walls stay plain
       if (variant === 1) {                                  // glass curtain wall
         ctx.fillStyle = 'rgba(58,62,68,.30)'; ctx.fillRect(wx, wy, S, 3);              // spandrel line
         ctx.fillStyle = glassFor(r, '#58687a', (r * 7 % 1) < .5 ? '#46566a' : '#4d5d71');
@@ -181,6 +181,15 @@ export const CITY = (() => {
         ctx.fillRect(gx + gw / 2 - 1, gy, 2, gh); ctx.fillRect(gx, gy + gh / 2 - 1, gw, 2);   // cross frame
         ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.fillRect(gx, gy, gw, 3);
         ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(gx - 4, gy + gh + 3, gw + 8, 3);  // stone sill
+      } else if (variant === 6) {                           // v2.88 PAINTED WALL: one flat wall tone, small dark punched openings with a lighter frame and sill
+        ctx.fillStyle = '#e8e5e0'; ctx.fillRect(wx, wy, S, S);                              // flat tone; the building's solid paint color multiplies it
+        const pw = 17, ph = 23, ox = Math.floor((S - pw) / 2), oy = 11;
+        ctx.fillStyle = '#fdfcf9'; ctx.fillRect(wx + ox - 3, wy + oy - 3, pw + 6, ph + 6);  // lighter frame (reads against the paint at every zoom)
+        ctx.fillStyle = r < .07 ? '#ffe7a8' : (r * 9 % 1) < .5 ? '#2a323d' : '#313a47';     // a few windows lit, most dark
+        ctx.fillRect(wx + ox, wy + oy, pw, ph);
+        ctx.fillStyle = 'rgba(0,0,0,.38)'; ctx.fillRect(wx + ox, wy + oy, pw, 3); ctx.fillRect(wx + ox, wy + oy, 2, ph);   // inset: shadow under the lintel and down one reveal
+        ctx.fillStyle = '#fdfcf9'; ctx.fillRect(wx + ox - 4, wy + oy + ph + 2, pw + 8, 3);  // sill
+        ctx.fillStyle = 'rgba(0,0,0,.14)'; ctx.fillRect(wx + ox - 4, wy + oy + ph + 5, pw + 8, 2);
       } else {                                              // 0 classic grid
         const gx = x * S + 12, gy = y * S + 10, gw = S - 21, gh = S - 18;
         ctx.fillStyle = 'rgba(70,70,74,.18)'; ctx.fillRect(wx, wy, S, 2);
@@ -309,9 +318,11 @@ export const CITY = (() => {
     0x7f8fa0, 0xa8b4c2, 0x6e7b86, 0x8496a8];              // slate + blue-glass
   const ROOF_DECKS = [0x3f4347, 0x4a3b2f, 0x3a434d, 0x4d5c51, 0x57504a,
     0x6b5d4a, 0x7a4638, 0x8a8378];                        // gravel-tan, tar-red, pale concrete
+  // v2.88 PAINTED WALLS: one solid wall color per building — cream, sand, ochre, pale yellow, terracotta, brick red, warm gray
+  const PAINT = [0xf0e4c8, 0xd9c29a, 0xd0a04a, 0xf1e3a0, 0xc4775a, 0xa8503f, 0xb9afa2, 0xe8d8b4, 0xd7b184, 0xbd6a4c];
   const SHINGLES = [0x6b4a33, 0x9c4a3c, 0x46505c, 0x3d4043, 0x7a5c48, 0x55603f];
   const TRIMS = [0x3a3f44, 0x4a3b2c, 0x5a4a42, 0x39424a, 0x4f4438, 0x2f3a41];
-  let _winTexs = [null, null, null, null, null, null], _asphTex = null, _groundTex = null, _shopTex = null, _dollarTex = null;
+  let _winTexs = [null, null, null, null, null, null, null], _asphTex = null, _groundTex = null, _shopTex = null, _dollarTex = null;
   const getWinTex = i => _winTexs[i] || (_winTexs[i] = windowTexture(i));
   const getAsphTex = () => _asphTex || (_asphTex = asphaltTexture());
   const getGroundTex = () => _groundTex || (_groundTex = groundTexture());
@@ -699,7 +710,7 @@ export const CITY = (() => {
   // bulkheads, parapets, water tanks, antennas) -----------------------
   function buildBuildings(city) {
     const dna = cityDNA(city);   // v2.65 CITY DNA
-    const wallArrs = [0, 1, 2, 3, 4, 5].map(() => ({ pos: [], norm: [], uv: [], col: [] }));   // v2.86: styles 4 (ribbon) + 5 (loft)
+    const wallArrs = [0, 1, 2, 3, 4, 5, 6].map(() => ({ pos: [], norm: [], uv: [], col: [] }));   // v2.86: styles 4 (ribbon) + 5 (loft)
     const shops = { pos: [], norm: [], uv: [], col: [] };
     const roofs = { pos: [], norm: [], uv: [], col: [] };    // decks, parapets, cornices
     const pitched = { pos: [], norm: [], uv: [], col: [] };  // hip/gable roof faces
@@ -708,7 +719,7 @@ export const CITY = (() => {
     buildingPolys = [];
     pitchedRects = [];
     const rnd = _mulberry(hashStr('b' + (city.key || city.name)));
-    let si = 0, nTier = 0;
+    let si = 0, nTier = 0, nPainted = 0, nBld = 0;   // v2.88: painted-wall census (QA)
     let tallest = null;   // v2.64: the skyline crown — track the tallest building
     const tintsUsed = [], roofsUsed = [];
 
@@ -934,6 +945,22 @@ export const CITY = (() => {
         const dr = _mulberry(hashStr('g' + b.bkey))();
         if (dr < Math.max(.3, Math.min(.92, .62 + dna.glass))) tint = tint.clone().lerp(colOf(h >= 60 ? 0x23272d : 0x30353c), h >= 60 ? .74 : .6);
       }
+      // v2.88 PAINTED WALLS: a share of low- and mid-rise homes and mixed-use blocks get ONE solid paint color and
+      // plain punched windows. Its own hash rolls, so every other roll for the building is unchanged.
+      nBld++;
+      let painted = false, paintBand = null;
+      if (h >= 3.6 && h < 22) {
+        const bt = b.t && b.t.building;
+        const civic = bt && /^(commercial|office|industrial|retail|warehouse|hospital|school|university|civic|public|government|hotel|church|cathedral|train_station|stadium)$/.test(bt);
+        if (!civic && _mulberry(hashStr('pw' + b.bkey))() < .4) {
+          painted = true; nPainted++;
+          const pc = _mulberry(hashStr('pc' + b.bkey));
+          let pcol = colOf(PAINT[Math.floor(pc() * PAINT.length)]);
+          if (reg && reg.warm && pc() < .55) pcol = pcol.lerp(colOf(reg.warm[Math.floor(pc() * reg.warm.length)]), .3);   // the region's own palette pulls the paint its way
+          tint = jit(pcol, (.95 + pc() * .1) * 1.08);                                                                      // 1.08 makes up for the .91 flat tone baked into the texture
+          paintBand = jit(tint, pc() < .5 ? 1.13 : .8);                                                                    // a lighter or a darker parapet / cornice band
+        }
+      }
       const shopTint = h >= 8.5 ? tint.clone().lerp(colOf(0xffffff), .5) : null;
       const y0 = shopTint ? 3.55 : .15;
       const sr = srnd();
@@ -945,6 +972,7 @@ export const CITY = (() => {
       // v2.86 FACADE STYLES: ribbon windows (4) on some mid-rises, loft windows (5) on some low and
       // mid-rise — their own hash roll, so every other roll for the building is unchanged
       if (h < 26) { const fr = _mulberry(hashStr('fs' + b.bkey))(); if (h >= 12 && fr < .22) style = 4; else if (h < 26 && fr > .8) style = 5; }
+      if (painted) style = 6;                           // v2.88 PAINTED WALLS: wins over every other roll
       const uOff = Math.floor(srnd() * 16);             // shift lit-window pattern
       const vOff = Math.floor(srnd() * 4);
       const deckPool = reg && reg.decks ? reg.decks : h >= 12 ? ROOF_DECKS.slice(0, 3) : ROOF_DECKS;   // v2.67: mid-rise+ flat roofs lean GRAY (the reference skyline); low-rise keeps the gravel/tan mix
@@ -1017,7 +1045,8 @@ export const CITY = (() => {
           pitchedRects.push(L);
         } else {                                        // flat roof finish
           roofDeck(p, .15 + h, deckC2);
-          if (h >= 40 || (h >= 12 && vr() < .3)) parapet(p, .15 + h, rimC, jit(deckC2, 1.1));   // v2.77: some mid-rises take a parapet too
+          if (painted) parapet(p, .15 + h, paintBand, jit(paintBand, 1.06));   // v2.88: the painted building's edge reads from above
+          else if (h >= 40 || (h >= 12 && vr() < .3)) parapet(p, .15 + h, rimC, jit(deckC2, 1.1));   // v2.77: some mid-rises take a parapet too
           else if (h > 7) cornice(p, .15 + h, trimC);
           // v2.77 green roof: an inset garden deck on some low/mid-rise roofs
           if (h < 26 && area >= 200 && vr() < .12) {
@@ -1156,7 +1185,7 @@ export const CITY = (() => {
       group.add(inst, tip);
     }
     buildStats = {
-      pitched: pitchedRects.length, tiered: nTier, suites: suites.length,
+      pitched: pitchedRects.length, tiered: nTier, suites: suites.length, painted: nPainted, buildings: nBld,   // v2.88: painted-wall census
       wallStyleVerts: wallArrs.map(a => a.pos.length / 3 | 0),
       pitchedVerts: pitched.pos.length / 3 | 0,
       trimVerts: trim.pos.length / 3 | 0,
