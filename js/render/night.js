@@ -341,11 +341,11 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.89 — FOREST VARIETY', `
-    <p><b>The country between cities stops being one forest.</b></p>
-    <div class="kv"><span class="k">BIOMES</span><span class="v">broadleaf, boreal spruce, dry savanna and rare autumn woods in ragged patches</span></div>
-    <div class="kv"><span class="k">TREES</span><span class="v">spruces, tall ovals, flat-topped savanna crowns, birch trunks, a size range and a few giants</span></div>
-    <div class="kv"><span class="k">GROUND</span><span class="v">low undergrowth bushes in the woods</span></div>
+  openModal('Welcome to v2.90 — PAINTED WALLS', `
+    <p><b>Some buildings get painted walls.</b></p>
+    <div class="kv"><span class="k">PAINT</span><span class="v">one solid warm color per building — cream, sand, ochre, terracotta, brick, warm gray</span></div>
+    <div class="kv"><span class="k">WINDOWS</span><span class="v">simple punched openings in a clean grid, a few lit, with a lighter frame and sill</span></div>
+    <div class="kv"><span class="k">ROOFLINE</span><span class="v">a light or dark parapet band so the edge reads from above</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }
