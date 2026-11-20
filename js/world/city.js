@@ -1468,22 +1468,45 @@ export const CITY = (() => {
     }
     if (lamps.length) {
       const n = Math.min(lamps.length, Math.floor(460 * mobF));
-      const poleM = new THREE.MeshLambertMaterial({ color: 0x363b41 });
-      const pole = new THREE.InstancedMesh(new THREE.CylinderGeometry(.06, .09, 5.6, 7), poleM, n);
-      const arm = new THREE.InstancedMesh(new THREE.BoxGeometry(.95, .08, .08), poleM, n);
-      const head = new THREE.InstancedMesh(new THREE.BoxGeometry(.6, .15, .22),
-        new THREE.MeshLambertMaterial({ color: 0xf2f4e6, emissive: 0x55523c }), n);
+      // v2.91 STREET FURNITURE: ~1 in 3 lamps is a short globe-top post, poles wear a few colors
+      // (all instanced; the style comes from a hash of the spot, so nothing shared shifts)
+      const sel = lamps.slice(0, n), hsh = (l, k) => hashStr(k + Math.round(l[0]) + ',' + Math.round(l[1]));
+      const globeL = sel.filter(l => hsh(l, 'gl') % 100 < 32), armL = sel.filter(l => hsh(l, 'gl') % 100 >= 32);
+      const POLE_COLS = [0x363b41, 0x363b41, 0x2d4a3a, 0x1f2326, 0x4a4f55, 0x5a3a2e], cc = new THREE.Color();
+      const poleM = new THREE.MeshLambertMaterial({ color: 0xffffff });
       const mat4 = new THREE.Matrix4(), q = new THREE.Quaternion();
-      for (let i = 0; i < n; i++) {
-        const [x, z, th] = lamps[i];
-        const cs = Math.cos(th), sn = Math.sin(th);
-        q.setFromAxisAngle(Y, th);
-        mat4.compose(new THREE.Vector3(x - AX, 2.96, z - AZ), q, new THREE.Vector3(1, 1, 1)); pole.setMatrixAt(i, mat4);
-        mat4.compose(new THREE.Vector3(x + .45 * cs - AX, 5.51, z - .45 * sn - AZ), q, new THREE.Vector3(1, 1, 1)); arm.setMatrixAt(i, mat4);
-        mat4.compose(new THREE.Vector3(x + .86 * cs - AX, 5.44, z - .86 * sn - AZ), q, new THREE.Vector3(1, 1, 1)); head.setMatrixAt(i, mat4);
+      if (armL.length) {
+        const m = armL.length;
+        const pole = new THREE.InstancedMesh(new THREE.CylinderGeometry(.06, .09, 5.6, 7), poleM, m);
+        const arm = new THREE.InstancedMesh(new THREE.BoxGeometry(.95, .08, .08), poleM, m);
+        const head = new THREE.InstancedMesh(new THREE.BoxGeometry(.6, .15, .22),
+          new THREE.MeshLambertMaterial({ color: 0xf2f4e6, emissive: 0x55523c }), m);
+        for (let i = 0; i < m; i++) {
+          const [x, z, th] = armL[i];
+          const cs = Math.cos(th), sn = Math.sin(th);
+          q.setFromAxisAngle(Y, th);
+          mat4.compose(new THREE.Vector3(x - AX, 2.96, z - AZ), q, new THREE.Vector3(1, 1, 1)); pole.setMatrixAt(i, mat4);
+          mat4.compose(new THREE.Vector3(x + .45 * cs - AX, 5.51, z - .45 * sn - AZ), q, new THREE.Vector3(1, 1, 1)); arm.setMatrixAt(i, mat4);
+          mat4.compose(new THREE.Vector3(x + .86 * cs - AX, 5.44, z - .86 * sn - AZ), q, new THREE.Vector3(1, 1, 1)); head.setMatrixAt(i, mat4);
+          cc.set(POLE_COLS[hsh(armL[i], 'pc') % POLE_COLS.length]); pole.setColorAt(i, cc); arm.setColorAt(i, cc);
+        }
+        pole.position.set(AX, 0, AZ); arm.position.set(AX, 0, AZ); head.position.set(AX, 0, AZ);   // v2.27
+        group.add(pole, arm, head);
       }
-      pole.position.set(AX, 0, AZ); arm.position.set(AX, 0, AZ); head.position.set(AX, 0, AZ);   // v2.27
-      group.add(pole, arm, head);
+      if (globeL.length) {                                  // short post-top globe lamps
+        const m = globeL.length;
+        const gpole = new THREE.InstancedMesh(new THREE.CylinderGeometry(.05, .08, 3.5, 7), poleM, m);
+        const globe = new THREE.InstancedMesh(new THREE.SphereGeometry(.27, 8, 6),
+          new THREE.MeshLambertMaterial({ color: 0xfff4d6, emissive: 0x6a5a30 }), m);
+        for (let i = 0; i < m; i++) {
+          const [x, z] = globeL[i];
+          mat4.compose(new THREE.Vector3(x - AX, 1.75, z - AZ), q.identity(), new THREE.Vector3(1, 1, 1)); gpole.setMatrixAt(i, mat4);
+          mat4.compose(new THREE.Vector3(x - AX, 3.72, z - AZ), q, new THREE.Vector3(1, 1, 1)); globe.setMatrixAt(i, mat4);
+          cc.set(POLE_COLS[hsh(globeL[i], 'pc') % POLE_COLS.length]); gpole.setColorAt(i, cc);
+        }
+        gpole.position.set(AX, 0, AZ); globe.position.set(AX, 0, AZ);
+        group.add(gpole, globe);
+      }
     }
 
     // -- fire hydrants --
@@ -1510,32 +1533,79 @@ export const CITY = (() => {
     if (hyds.length) {
       const n = Math.min(hyds.length, Math.floor(90 * mobF));
       const body = new THREE.InstancedMesh(new THREE.CylinderGeometry(.14, .17, .72, 8),
-        new THREE.MeshLambertMaterial({ color: 0xb03a2e }), n);
+        new THREE.MeshLambertMaterial({ color: 0xffffff }), n);
       const cap = new THREE.InstancedMesh(new THREE.CylinderGeometry(.09, .09, .16, 8),
-        new THREE.MeshLambertMaterial({ color: 0x8f2b22 }), n);
-      const mat4 = new THREE.Matrix4();
+        new THREE.MeshLambertMaterial({ color: 0xffffff }), n);
+      const mat4 = new THREE.Matrix4(), hc = new THREE.Color();
+      const HYD = [0xb03a2e, 0xb03a2e, 0xb03a2e, 0xd2a52a, 0xd2a52a, 0x3a6aa8];   // v2.91: mostly red, some yellow, a few blue
       for (let i = 0; i < n; i++) {
         mat4.identity(); mat4.setPosition(hyds[i][0] - AX, .52, hyds[i][1] - AZ); body.setMatrixAt(i, mat4);
         mat4.setPosition(hyds[i][0] - AX, .96, hyds[i][1] - AZ); cap.setMatrixAt(i, mat4);
+        const hcol = HYD[hashStr('hy' + Math.round(hyds[i][0]) + ',' + Math.round(hyds[i][1])) % HYD.length];
+        body.setColorAt(i, hc.set(hcol)); cap.setColorAt(i, hc.set(hcol).multiplyScalar(.78));
       }
       body.position.set(AX, 0, AZ); cap.position.set(AX, 0, AZ);   // v2.27
       group.add(body, cap);
     }
 
-    // -- trash bins beside every other lamp --
+    // -- trash bins beside every other lamp (v2.91: round steel bins and square colored recycling bins) --
     if (lamps.length) {
       const bins = [];
       for (let i = 0; i < lamps.length; i += 2) {
         const [x, z, th] = lamps[i];
-        bins.push([x + Math.cos(th) * .9, z - Math.sin(th) * .9]);   // toward the road a touch
+        bins.push([x + Math.cos(th) * .9, z - Math.sin(th) * .9, th]);   // toward the road a touch
       }
       const n = Math.min(bins.length, Math.floor(160 * mobF));
-      const inst = new THREE.InstancedMesh(new THREE.CylinderGeometry(.26, .3, .85, 8),
-        new THREE.MeshLambertMaterial({ color: 0x3d444a }), n);
-      const mat4 = new THREE.Matrix4();
-      for (let i = 0; i < n; i++) { mat4.identity(); mat4.setPosition(bins[i][0] - AX, .58, bins[i][1] - AZ); inst.setMatrixAt(i, mat4); }
-      inst.position.set(AX, 0, AZ);   // v2.27: city-local instances
-      group.add(inst);
+      const sq = bins.slice(0, n).filter(v => hashStr('bn' + Math.round(v[0]) + ',' + Math.round(v[1])) % 100 < 36);
+      const rd2 = bins.slice(0, n).filter(v => hashStr('bn' + Math.round(v[0]) + ',' + Math.round(v[1])) % 100 >= 36);
+      const mat4 = new THREE.Matrix4(), q = new THREE.Quaternion(), bc = new THREE.Color();
+      if (rd2.length) {
+        const inst = new THREE.InstancedMesh(new THREE.CylinderGeometry(.26, .3, .85, 8),
+          new THREE.MeshLambertMaterial({ color: 0x3d444a }), rd2.length);
+        for (let i = 0; i < rd2.length; i++) { mat4.identity(); mat4.setPosition(rd2[i][0] - AX, .58, rd2[i][1] - AZ); inst.setMatrixAt(i, mat4); }
+        inst.position.set(AX, 0, AZ);   // v2.27: city-local instances
+        group.add(inst);
+      }
+      if (sq.length) {
+        const SQC = [0x2f6b4a, 0x2a4f7a, 0x3d444a, 0x7a6a2a];
+        const inst = new THREE.InstancedMesh(new THREE.BoxGeometry(.58, .95, .58), new THREE.MeshLambertMaterial({ color: 0xffffff }), sq.length);
+        const lid = new THREE.InstancedMesh(new THREE.BoxGeometry(.64, .1, .64), new THREE.MeshLambertMaterial({ color: 0x23272b }), sq.length);
+        for (let i = 0; i < sq.length; i++) {
+          q.setFromAxisAngle(Y, sq[i][2]);
+          mat4.compose(new THREE.Vector3(sq[i][0] - AX, .55, sq[i][1] - AZ), q, new THREE.Vector3(1, 1, 1)); inst.setMatrixAt(i, mat4);
+          mat4.compose(new THREE.Vector3(sq[i][0] - AX, 1.07, sq[i][1] - AZ), q, new THREE.Vector3(1, 1, 1)); lid.setMatrixAt(i, mat4);
+          inst.setColorAt(i, bc.set(SQC[hashStr('bq' + Math.round(sq[i][0]) + ',' + Math.round(sq[i][1])) % SQC.length]));
+        }
+        inst.position.set(AX, 0, AZ); lid.position.set(AX, 0, AZ);
+        group.add(inst, lid);
+      }
+      // v2.91: newspaper boxes and planters, beside some lamps (re-checked against buildings, plots and asphalt)
+      const nb = [], pl = [];
+      for (let i = 1; i < lamps.length; i += 3) {
+        const [x, z, th] = lamps[i], px = x + Math.sin(th) * 1.7, pz = z + Math.cos(th) * 1.7;   // 1.7 m along the walk
+        if (pointInBuilding(px, pz) || plotAt(px, pz) || !offAsphalt(px, pz, 1.2)) continue;
+        (hashStr('np' + Math.round(px) + ',' + Math.round(pz)) % 100 < 55 ? nb : pl).push([px, pz, th]);
+      }
+      if (nb.length) {
+        const NBC = [0x2a5a9a, 0xb03a2e, 0xd2a52a, 0x2f6b4a];
+        const box = new THREE.InstancedMesh(new THREE.BoxGeometry(.5, .95, .42), new THREE.MeshLambertMaterial({ color: 0xffffff }), nb.length);
+        for (let i = 0; i < nb.length; i++) {
+          q.setFromAxisAngle(Y, nb[i][2]);
+          mat4.compose(new THREE.Vector3(nb[i][0] - AX, .5, nb[i][1] - AZ), q, new THREE.Vector3(1, 1, 1)); box.setMatrixAt(i, mat4);
+          box.setColorAt(i, bc.set(NBC[hashStr('nc' + Math.round(nb[i][0]) + ',' + Math.round(nb[i][1])) % NBC.length]));
+        }
+        box.position.set(AX, 0, AZ); group.add(box);
+      }
+      if (pl.length) {
+        const tub = new THREE.InstancedMesh(new THREE.BoxGeometry(.95, .55, .95), new THREE.MeshLambertMaterial({ color: 0x8c8a84 }), pl.length);
+        const shrub = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.5, 0), new THREE.MeshLambertMaterial({ color: 0xffffff }), pl.length);
+        for (let i = 0; i < pl.length; i++) {
+          mat4.identity(); mat4.setPosition(pl[i][0] - AX, .3, pl[i][1] - AZ); tub.setMatrixAt(i, mat4);
+          mat4.compose(new THREE.Vector3(pl[i][0] - AX, .85, pl[i][1] - AZ), q.identity(), new THREE.Vector3(1.1, .85, 1.1)); shrub.setMatrixAt(i, mat4);
+          shrub.setColorAt(i, bc.set([0x4a9d4a, 0x5fae52, 0x3d8a52, 0x7aa84a][hashStr('pc' + Math.round(pl[i][0])) % 4]));
+        }
+        tub.position.set(AX, 0, AZ); shrub.position.set(AX, 0, AZ); group.add(tub, shrub);
+      }
     }
 
     // -- sidewalk benches (parks already contributed theirs) --
@@ -1561,9 +1631,10 @@ export const CITY = (() => {
     if (benchScratch.length) {
       const n = benchScratch.length;
       const seat = new THREE.InstancedMesh(new THREE.BoxGeometry(1.7, .09, .48),
-        new THREE.MeshLambertMaterial({ color: 0x86664c }), n);
+        new THREE.MeshLambertMaterial({ color: 0xffffff }), n);
       const back = new THREE.InstancedMesh(new THREE.BoxGeometry(1.7, .55, .07),
-        new THREE.MeshLambertMaterial({ color: 0x7a5c44 }), n);
+        new THREE.MeshLambertMaterial({ color: 0xffffff }), n);
+      const BENCH = [0x86664c, 0x86664c, 0x9a7a58, 0x3f6b4a, 0x5a6672, 0x7a4a3a], bnc = new THREE.Color();   // v2.91: wood, painted green, steel, brick
       const leg = new THREE.InstancedMesh(new THREE.BoxGeometry(.08, .48, .4),
         new THREE.MeshLambertMaterial({ color: 0x2e3236 }), n * 2);
       const mat4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
@@ -1573,8 +1644,10 @@ export const CITY = (() => {
         q.setFromAxisAngle(Y, th);
         mat4.compose(new THREE.Vector3(x - AX, .48, z - AZ), q, new THREE.Vector3(1, 1, 1)); seat.setMatrixAt(i, mat4);
         e.set(-.21, th, 0, 'YXZ');
+        const bk = hashStr('bb' + Math.round(x) + ',' + Math.round(z)) % 100 < 22 ? .0001 : 1;          // some benches have no back
         mat4.compose(new THREE.Vector3(x - fx * .24 - AX, .84, z - fz * .24 - AZ),
-          new THREE.Quaternion().setFromEuler(e), new THREE.Vector3(1, 1, 1)); back.setMatrixAt(i, mat4);
+          new THREE.Quaternion().setFromEuler(e), new THREE.Vector3(1, bk, 1)); back.setMatrixAt(i, mat4);
+        bnc.set(BENCH[hashStr('bc' + Math.round(x) + ',' + Math.round(z)) % BENCH.length]); seat.setColorAt(i, bnc); back.setColorAt(i, bnc.multiplyScalar(.92));
         const sx = Math.cos(th), sz = -Math.sin(th);         // local +X in world
         mat4.compose(new THREE.Vector3(x + sx * .72 - AX, .24, z + sz * .72 - AZ), q, new THREE.Vector3(1, 1, 1)); leg.setMatrixAt(i * 2, mat4);
         mat4.compose(new THREE.Vector3(x - sx * .72 - AX, .24, z - sz * .72 - AZ), q, new THREE.Vector3(1, 1, 1)); leg.setMatrixAt(i * 2 + 1, mat4);

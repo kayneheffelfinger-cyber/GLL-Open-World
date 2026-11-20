@@ -341,11 +341,11 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.90 — PAINTED WALLS', `
-    <p><b>Some buildings get painted walls.</b></p>
-    <div class="kv"><span class="k">PAINT</span><span class="v">one solid warm color per building — cream, sand, ochre, terracotta, brick, warm gray</span></div>
-    <div class="kv"><span class="k">WINDOWS</span><span class="v">simple punched openings in a clean grid, a few lit, with a lighter frame and sill</span></div>
-    <div class="kv"><span class="k">ROOFLINE</span><span class="v">a light or dark parapet band so the edge reads from above</span></div>
+  openModal('Welcome to v2.91 — STREET FURNITURE', `
+    <p><b>Streets stop looking copy-pasted.</b></p>
+    <div class="kv"><span class="k">LAMPS</span><span class="v">short globe-top posts beside the arm lamps, in several pole colors</span></div>
+    <div class="kv"><span class="k">FITTINGS</span><span class="v">red, yellow and blue hydrants; round and square recycling bins; benches in wood, green, steel and brick, some without a back</span></div>
+    <div class="kv"><span class="k">EXTRAS</span><span class="v">newspaper boxes and planters on the sidewalks</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }
