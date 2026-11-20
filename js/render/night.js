@@ -341,12 +341,11 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.83 — LOANS', `
-    <p><b>Borrow from the city banks.</b></p>
-    <div class="kv"><span class="k">LOANS</span><span class="v">interest, a minimum every 10 game days, pay more or PAY OFF — BANK &gt; LOANS</span></div>
-    <div class="kv"><span class="k">CREDIT SCORE</span><span class="v">300–850: sets your rate, how much you may owe, your card limits</span></div>
-    <div class="kv"><span class="k">FALL BEHIND</span><span class="v">grace period, late fee, credit drop, then bank and property seizure — always warned first</span></div>
-    <div class="kv"><span class="k">AWAY</span><span class="v">loan time only passes while you play: nothing comes due offline</span></div>
+  openModal('Welcome to v2.84 — LOAN POLISH', `
+    <p><b>The loan dashboard gets a proper look.</b></p>
+    <div class="kv"><span class="k">CREDIT SCORE</span><span class="v">a 300–850 gauge with colored bands and your marker</span></div>
+    <div class="kv"><span class="k">ESCALATION</span><span class="v">a six-step stepper and banner that run green, amber, orange, red-orange, red, crimson as a loan falls behind</span></div>
+    <div class="kv"><span class="k">LOAN CARDS</span><span class="v">repaid progress, key figures and a tidy repayment schedule</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }

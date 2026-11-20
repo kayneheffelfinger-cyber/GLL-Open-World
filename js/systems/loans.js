@@ -253,23 +253,30 @@ export const LOAN = (() => {
   // ---- the dashboard (a tab in the BANK panel) --------------------------------------------------
   const val = id => { const e = document.getElementById(id); return e ? e.value : ''; };
   const num = id => +val(id);
+  // v2.84: the stage as a 0-5 step for the dashboard's escalation stepper (look only)
+  const STAGE_STEPS = ['CURRENT', 'GRACE PERIOD', 'LATE FEE', 'CREDIT DROP', 'BANK SEIZURE', 'PROPERTY SEIZURE'], STEP_LBL = ['ON TIME', 'GRACE', 'FEE', 'DROP', 'BANK', 'PROPERTY'];
+  const stepOf = lo => Math.max(0, STAGE_STEPS.indexOf(stageInfo(lo).name));
   function dashHTML() {
     const s = score(), l = L(), A = BANK.accts();
     const accOpts = (sel) => A.map(a => '<option value="' + a.id + '"' + (a.id === sel ? ' selected' : '') + '>' + esc(a.name) + ' · ' + fmt$(a.bal) + '</option>').join('');
     let h = '<div class="co-card"><div class="msec">Credit score</div>' +
-      '<div class="ln-score"><b class="' + (s >= 670 ? 'g' : s >= 580 ? 'y' : 'r') + '">' + s + '</b><span>' + rating(s) + ' · 300–850</span></div>' +
+      '<div class="ln-score"><b class="' + (s >= 670 ? 'g' : s >= 580 ? 'y' : 'r') + '">' + s + '</b><span class="ln-rate ' + (s >= 670 ? 'g' : s >= 580 ? 'y' : 'r') + '">' + rating(s) + '</span><span>300–850</span></div>' +
+      '<div class="ln-gauge"><i style="left:' + (Math.max(0, Math.min(1, (s - 300) / 550)) * 100).toFixed(1) + '%"></i></div><div class="ln-gl"><span style="left:0">300</span><span style="left:50.9%">580</span><span style="left:67.3%">670</span><span style="left:80%">740</span><span style="left:100%">850</span></div>' +
       '<div class="kv"><span class="k">YOUR RATE</span><span class="v">' + (aprFor(s) * 100).toFixed(1) + '% APR</span></div>' +
       '<div class="kv"><span class="k">YOU MAY OWE</span><span class="v">' + fmt$(maxTotal(s)) + ' in total · ' + fmt$(room()) + ' left</span></div>' +
       '<div class="kv"><span class="k">CARD LIMITS</span><span class="v">× ' + creditFactor().toFixed(2) + '</span></div>' +
       '<p class="co-sub">+4 per on-time payment, +20 for paying a loan off. Late payments, drops and seizures lower it. Loan time only passes while you play: nothing accrues or comes due while you are away.</p></div>';
+    const worst = loans().reduce((m, lo) => stepOf(lo) > (m ? stepOf(m) : 0) ? lo : m, null);
+    if (worst && stepOf(worst) > 0) { const wi = stageInfo(worst); h = '<div class="ln-banner st' + stepOf(worst) + '"><b>' + (stepOf(worst) >= 4 ? '🚨 ' : '⚠ ') + wi.name + ' · loan ' + worst.id + '</b><span>' + esc(wi.next) + '</span></div>' + h; }
     h += '<div class="co-card"><div class="msec">Your loans' + (loans().length ? ' · ' + fmt$(owed()) + ' owed' : '') + '</div>' + (loans().length ? loans().map(lo => {
-      const st = stageInfo(lo), sch = schedule(lo, 6), bank = BANK.acct(lo.acct);
-      return '<div class="ln-loan"><div class="co-item"><div><b>Loan ' + lo.id + '</b><span class="co-sub">' + esc(bank ? bank.name : 'bank') + ' · ' + (lo.apr * 100).toFixed(1) + '% APR · ' + lo.term + ' days</span></div><div class="bk-bal">' + fmt$(lo.balance) + '</div></div>' +
-        '<div class="ln-stage ' + st.cls + '"><b>' + st.name + '</b> ' + esc(st.next) + '</div>' +
-        '<div class="kv"><span class="k">MINIMUM / NEXT DUE</span><span class="v">' + fmt$(effMin(lo)) + ' every ' + X + ' days · day ' + lo.nextDue + '</span></div>' +
-        (lo.overdue > 0 ? '<div class="kv"><span class="k">OVERDUE</span><span class="v r">' + fmt$(lo.overdue) + (lo.fees ? ' · fees so far ' + fmt$(lo.fees) : '') + '</span></div>' : '') +
-        '<div class="kv"><span class="k">INTEREST SO FAR</span><span class="v">' + fmt$(lo.interest) + '</span></div>' +
-        '<details class="ln-sched"><summary>Repayment schedule</summary>' + sch.map(r => '<div class="co-led"><span class="co-sub">day ' + r.day + '</span><span>pay ' + fmt$(r.pay) + '</span><b>' + fmt$(r.bal) + ' left</b></div>').join('') + '</details>' +
+      const st = stageInfo(lo), sch = schedule(lo, 6), bank = BANK.acct(lo.acct), si = stepOf(lo);
+      const paidPct = Math.max(0, Math.min(100, Math.round((1 - lo.balance / Math.max(1, lo.principal)) * 100)));
+      return '<div class="ln-loan st' + si + '"><div class="co-item"><div><b>Loan ' + lo.id + '</b><span class="co-sub">' + esc(bank ? bank.name : 'bank') + ' · ' + (lo.apr * 100).toFixed(1) + '% APR · ' + lo.term + ' days</span></div><div class="bk-bal ln-bal">' + fmt$(lo.balance) + '</div></div>' +
+        '<div class="ln-prog"><div class="bk-bar"><i style="width:' + paidPct + '%"></i></div><div class="bk-uleg"><span>' + paidPct + '% repaid</span><span>borrowed ' + fmt$(lo.principal) + '</span></div></div>' +
+        '<div class="ln-steps">' + STEP_LBL.map((t, i) => '<span title="' + STAGE_STEPS[i] + '" class="s s' + i + (i < si ? ' done' : '') + (i === si ? ' on' : '') + '">' + t + '</span>').join('') + '</div>' +
+        '<div class="ln-stage ' + st.cls + ' st' + si + '"><b>' + st.name + '</b> ' + esc(st.next) + '</div>' +
+        '<div class="bk-stats"><div><span>MINIMUM</span><b>' + fmt$(effMin(lo)) + '</b></div><div><span>NEXT DUE</span><b class="' + (si > 0 ? 'r' : '') + '">day ' + lo.nextDue + '</b></div><div><span>INTEREST SO FAR</span><b>' + fmt$(lo.interest) + '</b></div>' + (lo.overdue > 0 ? '<div><span>OVERDUE</span><b class="r">' + fmt$(lo.overdue) + '</b></div>' : '') + (lo.fees ? '<div><span>FEES</span><b class="r">' + fmt$(lo.fees) + '</b></div>' : '') + '</div>' +
+        '<details class="ln-sched"><summary>Repayment schedule</summary>' + sch.map(r => '<div class="ln-sr"><span class="bk-day">D' + r.day + '</span><span>pay <b>' + fmt$(r.pay) + '</b></span><b>' + fmt$(r.bal) + ' left</b></div>').join('') + '</details>' +
         '<div class="co-row"><select id="ln-from-' + lo.id + '"><option value="cash">Cash · ' + fmt$(STATE.money) + '</option>' + accOpts(lo.acct) + '</select><input id="ln-amt-' + lo.id + '" type="number" min="1" step="1" placeholder="amount"></div>' +
         '<div class="co-row"><button class="tpbtn" data-ln="pay" data-v="' + lo.id + '">PAY</button><button class="tpbtn" data-ln="min" data-v="' + lo.id + '">PAY MINIMUM</button><button class="tpbtn" data-ln="off" data-v="' + lo.id + '">PAY OFF ' + fmt$(lo.balance) + '</button><button class="tpbtn" data-ln="auto" data-v="' + lo.id + '">AUTOPAY: ' + (lo.auto ? 'ON' : 'OFF') + '</button></div></div>';
     }).join('') : '<p class="co-sub">No loans. Borrow below — the money is paid into your account at the bank you pick.</p>') + '</div>';
