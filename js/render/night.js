@@ -341,10 +341,11 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.86 — FACADE MIX', `
-    <p><b>Neighboring buildings read as different buildings.</b></p>
-    <div class="kv"><span class="k">FACADES</span><span class="v">two new window styles: continuous ribbon bands on some mid-rises and big framed loft windows on some low and mid-rises</span></div>
-    <div class="kv"><span class="k">HEIGHTS</span><span class="v">untagged low-rise blocks now vary by whole storeys, so rows of equal boxes break up (real mapped heights stay as they are)</span></div>
+  openModal('Welcome to v2.87 — HOUSE VARIETY', `
+    <p><b>Suburban streets stop repeating one house.</b></p>
+    <div class="kv"><span class="k">ROOFS</span><span class="v">hip roofs alongside gables, and low single-storey bungalows</span></div>
+    <div class="kv"><span class="k">SHAPES</span><span class="v">some houses grow a cross-gable wing at the back</span></div>
+    <div class="kv"><span class="k">YARDS</span><span class="v">back fences and small sheds on some lots</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }

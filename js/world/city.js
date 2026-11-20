@@ -2441,17 +2441,19 @@ export const CITY = (() => {
     };
 
     // gable roof along the street axis + chimney + a dormer on the street slope
-    const subRoof = (hx, hz, ux, uz, HW, HD, yTop, tint, shinC, sr, side) => {
+    const subRoof = (hx, hz, ux, uz, HW, HD, yTop, tint, shinC, sr, side, hip) => {
       const px = -uz, pz = ux;
       const hU = HW / 2 + .38, hV = HD / 2 + .38;
       const rise = Math.min(2.6, hV * .72);
       const E = (du, dv) => [hx + ux * du + px * dv, yTop, hz + uz * du + pz * dv];
       const e1 = E(hU, hV), e2 = E(-hU, hV), e3 = E(-hU, -hV), e4 = E(hU, -hV);
-      const r1 = [hx + ux * hU, yTop + rise, hz + uz * hU], r2 = [hx - ux * hU, yTop + rise, hz - uz * hU];
+      // v2.87: a hip roof pulls the ridge in from both ends and slopes the ends too (same triangle count)
+      const rh = hip ? Math.max(.7, hU - hV * 1.05) : hU;
+      const r1 = [hx + ux * rh, yTop + rise, hz + uz * rh], r2 = [hx - ux * rh, yTop + rise, hz - uz * rh];
       pushQuadN(roof, e1, r1, r2, e2, shinC, [px, .5, pz]);        // +v slope
       pushQuadN(roof, e3, r2, r1, e4, shinC, [-px, .5, -pz]);      // -v slope
-      pushTri(roof, e1, e4, r1, jit(tint, .93), [ux, .4, uz]);     // gable end walls
-      pushTri(roof, e2, e3, r2, jit(tint, .93), [-ux, .4, -uz]);
+      pushTri(roof, e1, e4, r1, hip ? shinC : jit(tint, .93), [ux, .4, uz]);     // gable end walls (hip ends are roof)
+      pushTri(roof, e2, e3, r2, hip ? shinC : jit(tint, .93), [-ux, .4, -uz]);
       if (sr() < .6) {                                             // chimney near the ridge
         const cu = (sr() < .5 ? 1 : -1) * (hU - 1.4) * .62;
         const chx = hx + ux * cu, chz = hz + uz * cu;
@@ -2590,7 +2592,11 @@ export const CITY = (() => {
             // v2.65 CITY DNA: villa scale on the footprint, height
             // character on the two-story odds
             const HW = Math.min(17, (8.5 + rnd() * 4.5) * dna.villa), HD = Math.min(14, (6.5 + rnd() * 3) * dna.villa);
-            const hh = rnd() < Math.min(.5, .3 * dna.tall) ? 7 + rnd() * .9 : 4.4 + rnd() * 1.5;
+            let hh = rnd() < Math.min(.5, .3 * dna.tall) ? 7 + rnd() * .9 : 4.4 + rnd() * 1.5;
+            // v2.87 HOUSE VARIETY: its own hash stream (vh) so the shared rnd / srnd sequences are untouched
+            const vh = _mulberry(hashStr('hv' + (city.key || 'c') + placed));
+            if (vh() < .2) hh = 3.5 + vh() * .6;                       // a low single-storey bungalow
+            const hipOn = vh() < .3;
             const back = rnd() * Math.max(2, depth - HD - 8);
             const hv = off0 + 6.5 + back + HD / 2;
             const hx = A[0] + ux * d + px * hv * side, hz = A[1] + uz * d + pz * hv * side;
@@ -2621,8 +2627,28 @@ export const CITY = (() => {
                 const q1 = hp[e], q2 = hp[(e + 1) % 4], ex = q2[0] - q1[0], ez = q2[1] - q1[1], el = Math.hypot(ex, ez) || 1;
                 pushQuadN(roof, [q1[0], y1, q1[1]], [q1[0], y1 + .6, q1[1]], [q2[0], y1 + .6, q2[1]], [q2[0], y1, q2[1]], rim, [ez / el, 0, -ex / el]);
               }
-            } else
-            subRoof(hx, hz, ux, uz, HW, HD, .15 + hh, tint, shinC, srnd, side);
+            } else {
+            subRoof(hx, hz, ux, uz, HW, HD, .15 + hh, tint, shinC, srnd, side, hipOn);
+            // v2.87: rear cross-gable wing / back-yard shed — only where the lot has room behind the house
+            const marginB = depth - (6.5 + back + HD);
+            if (marginB > 5.5) {
+              const F = (du, dw) => [hx + ux * du + px * side * dw, hz + uz * du + pz * side * dw];
+              const wr = vh();
+              if (wr < .22 && HD >= 6) {                               // wing: perpendicular gable poking out the back
+                const WW = Math.min(6.4, HD * .9 + .6), wsg = vh() < .5 ? 1 : -1, uc = wsg * (HW / 2 - WW / 2 - 1.1), wl = HD / 2 + 4.2;
+                let wp = [F(uc - WW / 2, HD / 2 - .3), F(uc + WW / 2, HD / 2 - .3), F(uc + WW / 2, wl), F(uc - WW / 2, wl)];
+                if (_polyArea(wp) < 0) wp.reverse();
+                wallBandSub(wp, .15, .15 + hh, tint, uOff + 2, vOff);
+                const wc = F(uc, wl / 2 + .15);
+                subRoof(wc[0], wc[1], px * side, pz * side, wl, WW, .15 + hh, tint, shinC, srnd, 1, false);
+              } else if (wr < .40) {                                   // a small shed at the back of the yard
+                const su = (vh() < .5 ? 1 : -1) * lotHW * .35, sc = LP(su, off0 + depth - 2.6);
+                boxSub(sc[0], sc[1], .15, 2.6, 1.3, 1.2, jit(colOf(0x8a7a64), .9 + vh() * .22), ux, uz);
+              }
+            }
+            // v2.87: a back-yard fence on some lots
+            if (vh() < .2) { const fc = LP(0, off0 + depth - .5); boxSub(fc[0], fc[1], .15, 1.25, lotHW - .4, .06, jit(colOf(0xb8a88a), .92 + vh() * .12), ux, uz); }
+            }
             // door + porch on the street face
             const fpx = -px * side, fpz = -pz * side;
             const doorU = (srnd() - .5) * (HW - 3.2);
