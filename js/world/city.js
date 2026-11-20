@@ -167,6 +167,20 @@ export const CITY = (() => {
         ctx.fillRect(wx + ox, wy + oy, bw, bh);
         ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.fillRect(wx + ox, wy + oy, bw, 2);
         ctx.fillStyle = 'rgba(70,70,74,.2)'; ctx.fillRect(wx, wy, S, 2);
+      } else if (variant === 4) {                           // v2.86 ribbon windows: a continuous glass band per floor over a solid spandrel
+        ctx.fillStyle = 'rgba(70,70,74,.20)'; ctx.fillRect(wx, wy, S, 14);                 // spandrel
+        ctx.fillStyle = 'rgba(255,255,255,.22)'; ctx.fillRect(wx, wy + 14, S, 2);          // sill light
+        ctx.fillStyle = glassFor(r, '#56637a', '#46526a'); ctx.fillRect(wx, wy + 16, S, S - 22);
+        ctx.fillStyle = 'rgba(200,225,255,.22)'; ctx.fillRect(wx, wy + 16, S, 5);          // sky band
+        ctx.fillStyle = 'rgba(244,242,239,.55)'; ctx.fillRect(wx + S - 2, wy + 16, 2, S - 22);   // thin mullion
+      } else if (variant === 5) {                           // v2.86 loft windows: big steel-framed 2x2 panes in a heavy surround
+        const gx = wx + 7, gy = wy + 7, gw = S - 14, gh = S - 14;
+        ctx.fillStyle = 'rgba(40,42,46,.30)'; ctx.fillRect(gx - 3, gy - 3, gw + 6, gh + 6);   // dark surround
+        ctx.fillStyle = glassFor(r, '#56637a', '#475468'); ctx.fillRect(gx, gy, gw, gh);
+        ctx.fillStyle = 'rgba(244,242,239,.78)';
+        ctx.fillRect(gx + gw / 2 - 1, gy, 2, gh); ctx.fillRect(gx, gy + gh / 2 - 1, gw, 2);   // cross frame
+        ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.fillRect(gx, gy, gw, 3);
+        ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(gx - 4, gy + gh + 3, gw + 8, 3);  // stone sill
       } else {                                              // 0 classic grid
         const gx = x * S + 12, gy = y * S + 10, gw = S - 21, gh = S - 18;
         ctx.fillStyle = 'rgba(70,70,74,.18)'; ctx.fillRect(wx, wy, S, 2);
@@ -297,7 +311,7 @@ export const CITY = (() => {
     0x6b5d4a, 0x7a4638, 0x8a8378];                        // gravel-tan, tar-red, pale concrete
   const SHINGLES = [0x6b4a33, 0x9c4a3c, 0x46505c, 0x3d4043, 0x7a5c48, 0x55603f];
   const TRIMS = [0x3a3f44, 0x4a3b2c, 0x5a4a42, 0x39424a, 0x4f4438, 0x2f3a41];
-  let _winTexs = [null, null, null, null], _asphTex = null, _groundTex = null, _shopTex = null, _dollarTex = null;
+  let _winTexs = [null, null, null, null, null, null], _asphTex = null, _groundTex = null, _shopTex = null, _dollarTex = null;
   const getWinTex = i => _winTexs[i] || (_winTexs[i] = windowTexture(i));
   const getAsphTex = () => _asphTex || (_asphTex = asphaltTexture());
   const getGroundTex = () => _groundTex || (_groundTex = groundTexture());
@@ -685,7 +699,7 @@ export const CITY = (() => {
   // bulkheads, parapets, water tanks, antennas) -----------------------
   function buildBuildings(city) {
     const dna = cityDNA(city);   // v2.65 CITY DNA
-    const wallArrs = [0, 1, 2, 3].map(() => ({ pos: [], norm: [], uv: [], col: [] }));
+    const wallArrs = [0, 1, 2, 3, 4, 5].map(() => ({ pos: [], norm: [], uv: [], col: [] }));   // v2.86: styles 4 (ribbon) + 5 (loft)
     const shops = { pos: [], norm: [], uv: [], col: [] };
     const roofs = { pos: [], norm: [], uv: [], col: [] };    // decks, parapets, cornices
     const pitched = { pos: [], norm: [], uv: [], col: [] };  // hip/gable roof faces
@@ -887,7 +901,15 @@ export const CITY = (() => {
       const area = Math.abs(_polyArea(p));
       const cx = p.reduce((s, v) => s + v[0], 0) / p.length;
       const cz = p.reduce((s, v) => s + v[1], 0) / p.length;
-      const h = b.h;
+      // v2.86 HEIGHT VARIETY: untagged low-rise buildings (no OSM height / levels) vary by whole
+      // storeys — -1..+2 — so a block of equal-height boxes breaks up. Tagged heights stay true,
+      // and the result stays under 15.5 m so no building crosses an office-suite threshold.
+      const tagged = !!(b.t && (isFinite(parseFloat(b.t.height)) || isFinite(parseFloat(b.t['building:levels']))));
+      let h = b.h;
+      if (!tagged && h < 14 && !b.sub) {
+        const jr = _mulberry(hashStr('hj' + b.bkey))(), st = Math.round(h / 3.2);
+        h = Math.min(15.5, Math.max(3.6, (st + (jr < .2 ? -1 : jr < .55 ? 0 : jr < .85 ? 1 : 2)) * 3.2));
+      }
       // ---- per-building style roll (deterministic by bkey) ----
       // v2.65 CITY DNA: the city's warm↔cool bias rides the existing
       // height-driven palette odds, and every palette draw comes from
@@ -920,6 +942,9 @@ export const CITY = (() => {
       else if (h >= 12) style = sr < Math.max(.1, Math.min(.6, .38 - dna.glass * .8)) ? 0
         : sr < Math.max(.2, Math.min(.9, .68 + dna.glass * .5)) ? 3 : 2;
       else style = sr < .55 ? 0 : 2;                   // low-rise: classic or punched
+      // v2.86 FACADE STYLES: ribbon windows (4) on some mid-rises, loft windows (5) on some low and
+      // mid-rise — their own hash roll, so every other roll for the building is unchanged
+      if (h < 26) { const fr = _mulberry(hashStr('fs' + b.bkey))(); if (h >= 12 && fr < .22) style = 4; else if (h < 26 && fr > .8) style = 5; }
       const uOff = Math.floor(srnd() * 16);             // shift lit-window pattern
       const vOff = Math.floor(srnd() * 4);
       const deckPool = reg && reg.decks ? reg.decks : h >= 12 ? ROOF_DECKS.slice(0, 3) : ROOF_DECKS;   // v2.67: mid-rise+ flat roofs lean GRAY (the reference skyline); low-rise keeps the gravel/tan mix
