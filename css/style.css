@@ -687,6 +687,7 @@ table.menu td.m{font-family:var(--mono);color:var(--green)}
 #bk-body{display:flex;flex-direction:column;gap:10px}
 .bk-bal{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--green2)}
 .bk-stmt b:last-child{font-family:var(--mono);white-space:nowrap}
+<<<<<<< HEAD
 /* v2.82 bank polish — all original: card faces, credit-use bar, ledger and statement grids */
 .bk-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .bk-sum>div{padding:9px 11px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid var(--line2);min-width:0}
@@ -744,3 +745,13 @@ table.menu td.m{font-family:var(--mono);color:var(--green)}
 .co-row select#bk-from,.co-row select#bk-to{flex:1 1 0;min-width:0}
 #bk-body .co-row>.co-sub{flex:0 0 auto}
 .co-row select#bk-from,.co-row select#bk-to{font-size:12px}
+=======
+
+/* ================= LOANS (v2.82) ================= */
+.ln-score{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}.ln-score b{font-size:30px;font-family:var(--mono)}.ln-score span{color:var(--dim);font-size:11px}
+.ln-score .g,.ln-stage.g b{color:var(--green2)}.ln-score .y,.ln-stage.y b{color:#F5CC74}.ln-score .r,.ln-stage.r b{color:#FCA5A5}
+.ln-loan{padding:8px 0;border-bottom:1px solid rgba(255,255,255,.07)}.ln-loan:last-child{border-bottom:0}
+.ln-stage{font-size:11.5px;padding:7px 9px;border-radius:8px;background:rgba(255,255,255,.05);margin:4px 0}
+.ln-stage.y{background:rgba(245,204,116,.10)}.ln-stage.r{background:rgba(252,129,129,.10)}
+.ln-sched{margin:4px 0}.ln-sched summary{cursor:pointer;font-size:10.5px;color:var(--dim);letter-spacing:.6px}
+>>>>>>> 659f043 (wip loans)

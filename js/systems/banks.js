@@ -48,6 +48,7 @@ export const BANK = (() => {
   const byKey = {}; for (const c of CITIES) byKey[c.key] = c;
   const bankName = k => ((byKey[k] || {}).name || k) + ' Savings & Trust';
   let panelTab = 'accounts', dayT = 0;
+  const sections = [], dayListeners = [];                    // v2.82: other modules (loans) add panel tabs and ride the game-day beat
 
   // ---- state (lazy: a save load can replace STATE) -------------------------------
   function B() {
@@ -192,7 +193,8 @@ export const BANK = (() => {
   // ---- net worth -----------------------------------------------------------------------
   const assets = () => accts().reduce((s, a) => s + a.bal, 0);
   const owed = () => Object.values(B().cc).reduce((s, c) => s + c.owed, 0);
-  const net = () => r2(assets() - owed());
+  const loansOwed = () => { try { return window.LOAN ? +window.LOAN.owed() || 0 : 0; } catch (e) { return 0; } };   // v2.82: loans subtract from net worth
+  const net = () => r2(assets() - owed() - loansOwed());
 
   // ---- the game clock: days, month-end statements, due dates -----------------------------
   function tick(dt) {
@@ -210,6 +212,7 @@ export const BANK = (() => {
       if (left === 3) toast('💳 <b>Card payment due in 3 days</b> — ' + fmt$(s.minDue) + ' minimum on your ' + bankName(id.slice(2)) + ' card.', 'warn');
       if (left < 0 && !s.late) { s.late = 1; post('cc_' + id, 'fee', LATE_FEE, 'late fee: minimum payment missed'); toast('💳 <b>Late fee ' + fmt$(LATE_FEE) + '</b> — the minimum was not paid by the due day.', 'warn'); }
     }
+    for (const f of dayListeners) { try { f(b.day); } catch (e) { console.error('[banks]', e); } }   // loans: interest, due dates, escalation
     if (b.day % MONTH === 0) monthEnd();
     try { saveGame(); } catch (e) { } if (document.getElementById('bk-body')) render();
   }
@@ -227,7 +230,7 @@ export const BANK = (() => {
         if (unpaid > .004) post('cc_' + id, 'interest', r2(unpaid * CC_INT_M), 'interest on the unpaid balance');
       }
       const open = c.stmtOpen || 0;
-      c.limit = Math.max(c.limit, limitFor(id));
+      c.limit = scoreFactor() < 1 ? Math.min(c.limit, limitFor(id)) : Math.max(c.limit, limitFor(id));   // a poor credit score shrinks the limit; a good one only ever raises it
       const closing = c.owed, minDue = closing > 0 ? Math.min(closing, Math.max(MIN_FLOOR, r2(closing * MIN_PCT))) : 0;
       b.stmts.push({ id: 's' + (++b.seq), month, day: b.day, kind: 'card', line: id, name: bankName(id.slice(2)) + ' credit card', open, close: closing, purchases: c.purch, payments: c.pay, minDue, dueDay: b.day + DUE_GAP, limit: c.limit });
       c.stmt = { closing, minDue, dueDay: b.day + DUE_GAP, closeDay: b.day, paidSince: 0, late: 0, settled: closing <= 0 ? 1 : 0 };
@@ -251,13 +254,20 @@ export const BANK = (() => {
   function accOpts(sel, extra) { return accts().map(a => '<option value="' + a.id + '"' + (a.id === sel ? ' selected' : '') + '>' + esc(a.name) + ' · ' + fmt$(a.bal) + '</option>').join('') + (extra || ''); }
   function render() {
     const el = document.getElementById('bk-body'); if (!el) return;
+<<<<<<< HEAD
     const b = B(), tabs = [['accounts', 'ACCOUNTS'], ['transfer', 'TRANSFER'], ['cards', 'CARDS'], ['statements', 'STATEMENTS'], ['ledger', 'LEDGER']];
     let h = '<div class="bk-sum"><div><span>CASH</span><b>' + fmt$(STATE.money) + '</b></div><div><span>IN BANKS</span><b>' + fmt$(assets()) + '</b></div><div><span>OWED ON CARDS</span><b class="' + (owed() > 0 ? 'r' : '') + '">' + fmt$(owed()) + '</b></div><div class="bk-net"><span>NET WORTH</span><b>' + fmt$(net()) + '</b></div></div><div class="co-sub bk-clock">game day ' + day() + ' · month ' + (Math.floor(day() / MONTH) + 1) + '</div>' +
+=======
+    const b = B(), tabs = [['accounts', 'ACCOUNTS'], ['transfer', 'TRANSFER'], ['cards', 'CARDS']].concat(sections.map(s => [s.id, s.label])).concat([['statements', 'STATEMENTS'], ['ledger', 'LEDGER']]);
+    let h = '<div class="co-wallet"><div><span class="k">CASH</span> <b>' + fmt$(STATE.money) + '</b><span class="co-sub"> · in banks ' + fmt$(assets()) + ' · owed on cards ' + fmt$(owed()) + (loansOwed() > 0 ? ' · loans ' + fmt$(loansOwed()) : '') + ' · <b>net ' + fmt$(net()) + '</b></span></div><div class="co-sub">game day ' + day() + ' · month ' + (Math.floor(day() / MONTH) + 1) + '</div></div>' +
+>>>>>>> 659f043 (wip loans)
       '<div class="co-tabs">' + tabs.map(t => '<button class="co-tab' + (panelTab === t[0] ? ' on' : '') + '" data-bk="tab" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>';
-    h += ({ accounts: accountsHTML, transfer: transferHTML, cards: cardsHTML, statements: statementsHTML, ledger: ledgerHTML }[panelTab] || accountsHTML)();
+    const sec = sections.find(s => s.id === panelTab);
+    h += sec ? sec.html() : ({ accounts: accountsHTML, transfer: transferHTML, cards: cardsHTML, statements: statementsHTML, ledger: ledgerHTML }[panelTab] || accountsHTML)();
     if (el.dataset.h === h) return;
     const ae = document.activeElement; if (ae && el.contains(ae) && ae.matches('input,select')) return;   // never rebuild under the cursor
     el.dataset.h = h; el.innerHTML = h; wire(el);
+    if (sec && sec.wire) sec.wire(el);
   }
   function accountsHTML() {
     const A = accts(), have = new Set(A.map(a => a.cityKey));
@@ -353,7 +363,8 @@ export const BANK = (() => {
 
   return {
     open, close, deposit, withdraw, transfer, issueDebit, applyCredit, payCard, pay, setMethod, openPanel, empireInto, tick, installButton,
-    net, assets, owed, limitFor, bankName, XFER_FEE, MONTH, DAY,
+    post, cash, render, accts, acct, day, r2, addSection(s) { sections.push(s); }, onDay(f) { dayListeners.push(f); },
+    net, assets, owed, loansOwed, limitFor, bankName, XFER_FEE, MONTH, DAY,
     get state() { return B(); },
     // QA: run n whole game days instantly (the same day beat the clock runs)
     qaDays(n) { for (let i = 0; i < (n || 1); i++) { try { nextDay(); } catch (e) { console.error('[banks]', e); } } return this.snap(); },

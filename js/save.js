@@ -189,6 +189,20 @@ export function loadGame() {
       if (mi > 0) { const kind = mm.slice(0, mi), id = mm.slice(mi + 1); if ((kind === 'debit' && out.debit[id]) || (kind === 'credit' && out.cc[id])) out.method = mm; }
       STATE.bank = out;
     }
+    // v2.82 LOANS: credit score + loans (absent on older saves — score 700, no loans)
+    {
+      const __l = (p.loan && typeof p.loan === 'object') ? p.loan : {}, __m = (v, lo, hi) => Math.min(hi, Math.max(lo, isFinite(+v) ? +v : 0)), __r = v => Math.round(v * 100) / 100;
+      const out = { score: Math.round(isFinite(+__l.score) ? __m(__l.score, 300, 850) : 700), seq: Math.floor(__m(__l.seq, 0, 1e6)), loans: [], log: [], hist: { onTime: 0, late: 0, paidOff: 0, seized: 0 }, lastMonth: Math.floor(__m(__l.lastMonth, 0, 1e6)) };
+      const H = __l.hist && typeof __l.hist === 'object' ? __l.hist : {}; for (const k of ['onTime', 'late', 'paidOff', 'seized']) out.hist[k] = Math.floor(__m(H[k], 0, 1e6));
+      out.loans = (Array.isArray(__l.loans) ? __l.loans : []).filter(x => x && typeof x.id === 'string' && +x.balance > 0 && +x.minPay > 0 && isFinite(+x.apr)).slice(0, 3).map(x => {
+        const w = x.warned && typeof x.warned === 'object' ? x.warned : {}, warned = {}; for (const k of Object.keys(w).slice(0, 12)) if (w[k]) warned[k.slice(0, 12)] = 1;
+        return { id: x.id.slice(0, 12), acct: String(x.acct || '').slice(0, 40), principal: __r(__m(x.principal, 0, 1e7)), balance: __r(__m(x.balance, 0, 1e8)), apr: __m(x.apr, .01, .6), term: Math.floor(__m(x.term, 10, 720)), n: Math.floor(__m(x.n, 1, 72)), minPay: __r(__m(x.minPay, .01, 1e8)), opened: Math.floor(__m(x.opened, 0, 1e6)), nextDue: Math.floor(__m(x.nextDue, 0, 1e7)),
+          paid: __r(__m(x.paid, 0, 1e8)), overdue: __r(__m(x.overdue, 0, 1e8)), missedSince: x.missedSince == null || !isFinite(+x.missedSince) ? null : Math.floor(__m(x.missedSince, 0, 1e7)), fees: __r(__m(x.fees, 0, 1e8)), interest: __r(__m(x.interest, 0, 1e8)),
+          stage: Math.floor(__m(x.stage, 0, 6)), warned, feeAt: Math.floor(__m(x.feeAt, 0, 1e7)), dropAt: Math.floor(__m(x.dropAt, 0, 1e7)), auto: x.auto ? 1 : 0 };
+      });
+      out.log = (Array.isArray(__l.log) ? __l.log : []).slice(-40).filter(e => e && typeof e.text === 'string').map(e => ({ day: Math.floor(__m(e.day, 0, 1e7)), text: e.text.slice(0, 140) }));
+      STATE.loan = out;
+    }
     // v2.62 DEEP WATER: the offshore oil rigs (absent on older saves — none built)
     STATE.rigs = (p.rigs || []).filter(r => r && typeof r.id === 'string' && r.id.charAt(0) === 'r' && isFinite(+r.x) && isFinite(+r.z) && +r.ore > 0)
       .slice(0, 8)
@@ -255,6 +269,7 @@ export function saveGame() {
       gen: (() => { const g = STATE.gen || {}; return { sell: g.sell === 0 ? 0 : 1, t: +(+g.t || 0).toFixed(2), sold: +(+g.sold || 0).toFixed(2), black: (g.black | 0), units: (g.units || []).slice(0, 24).map(u => ({ id: u.id, t: u.t, x: Math.round(+u.x || 0), z: Math.round(+u.z || 0), on: u.on ? 1 : 0, sea: u.sea ? 1 : 0, price: Math.round(+u.price || 0), burnt: +(+u.burnt || 0).toFixed(1) })) }; })(),   // v2.75 OWN POWER (optional field — older builds ignore it)
       co: (() => { const c = STATE.co || {}; const o = { pend: {}, seq: c.seq || {}, claimed: (c.claimed || []).slice(-200) }; for (const k in (c.pend || {})) if (+c.pend[k] > 0) o.pend[k] = +(+c.pend[k]).toFixed(2); if (c.inflight) o.inflight = c.inflight; return o; })(),   // v2.77 COMPANIES (optional field — older builds ignore it)
       bank: (() => { const b = STATE.bank || {}; return { day: b.day | 0, seq: b.seq | 0, method: b.method || 'cash', accts: b.accts || {}, debit: b.debit || {}, cc: b.cc || {}, ledger: (b.ledger || []).slice(-300), stmts: (b.stmts || []).slice(-48), inbound: (b.inbound || []).slice(0, 10) }; })(),   // v2.80 BANKS (optional field — older builds ignore it)
+      loan: (() => { const l = STATE.loan || {}; return { score: l.score | 0 || 700, seq: l.seq | 0, lastMonth: l.lastMonth | 0, hist: l.hist || {}, loans: (l.loans || []).slice(0, 3), log: (l.log || []).slice(-40) }; })(),   // v2.82 LOANS (optional field — older builds ignore it)
       gfx: STATE.gfx ? { sh: STATE.gfx.shadows === false ? 0 : 1, tr: STATE.gfx.trees === false ? 0 : 1, sc: STATE.gfx.scale === .75 || STATE.gfx.scale === .5 ? STATE.gfx.scale : 1, lt: STATE.gfx.lite ? 1 : 0, tn: STATE.gfx.tone === 'classic' ? 0 : 1 } : null,   // v2.66 PICTURE (optional field — older builds ignore it)
       dsg: (STATE.designs || []).slice(0, 12).map(d => ({ n: d.name, w: +d.w || 10, d: +d.d || 8, f: d.floors | 0, s: d.style || 'brick' })),   // v2.67 THE ARCHITECT (optional field — older builds ignore it; cost/days/income re-derive on load, so a balance tweak in a later build re-prices old designs honestly)
       market: STATE.market ? STATE.market.pack() : null,

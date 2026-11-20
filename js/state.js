@@ -26,6 +26,7 @@ export const STATE = {
   gen: { sell: 1, t: 12, sold: 0, units: [], out: null },   // v2.75 OWN POWER: your generators {sell switch, game clock hours, $ sold to the grid, units [{id,t,x,z,on,sea,price,spot,burnt,dry}]}
   co: { pend: {}, seq: {}, claimed: [] },   // v2.77 COMPANIES (inert until the server supports them): company income held for the next bank report, report sequence numbers, wallet payouts already credited, an unanswered income batch
   bank: { accts: {}, debit: {}, cc: {}, ledger: [], stmts: [], inbound: [], day: 0, seq: 0, method: 'cash' },   // v2.80 BANKS: one account per city bank {id, cityKey, name, bal, opened, m}, debit cards, credit cards {limit, owed, stmt...}, the append-only ledger, monthly statements, the game-day count, the PAY WITH method
+  loan: { score: 700, seq: 0, loans: [], log: [], hist: { onTime: 0, late: 0, paidOff: 0, seized: 0 }, lastMonth: 0 },   // v2.82 LOANS: credit score, active loans {id, acct, principal, balance, apr, minPay, nextDue, overdue, missedSince, stage...}, history log (loan time = BANK game days: it never advances offline)
   gfx: { shadows: true, trees: true, scale: 1, lite: false, tone: 'moody' },   // v2.66 PICTURE: the graphics levers behind the Help tab's GRAPHICS button — saved with the world
   designs: [],                   // v2.67 THE ARCHITECT: your drafted buildings {name, w, d, h, floors, style, mat, days, inc, val} — placed buildings save t = 100 + index
   market: null,                  // MARKET module state (positions/orders)
