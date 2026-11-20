@@ -341,11 +341,11 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.87 — HOUSE VARIETY', `
-    <p><b>Suburban streets stop repeating one house.</b></p>
-    <div class="kv"><span class="k">ROOFS</span><span class="v">hip roofs alongside gables, and low single-storey bungalows</span></div>
-    <div class="kv"><span class="k">SHAPES</span><span class="v">some houses grow a cross-gable wing at the back</span></div>
-    <div class="kv"><span class="k">YARDS</span><span class="v">back fences and small sheds on some lots</span></div>
+  openModal('Welcome to v2.88 — TREE VARIETY', `
+    <p><b>The trees stop being one tree.</b></p>
+    <div class="kv"><span class="k">SHAPES</span><span class="v">round, conifer and tall oval crowns</span></div>
+    <div class="kv"><span class="k">COLOR</span><span class="v">a range of greens, and the odd autumn tree</span></div>
+    <div class="kv"><span class="k">SIZE</span><span class="v">small saplings up to a few big old trees</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }

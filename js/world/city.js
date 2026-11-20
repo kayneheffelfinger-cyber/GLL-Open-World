@@ -1365,23 +1365,47 @@ export const CITY = (() => {
     }
   }
 
+  // v2.88 TREE VARIETY: three crowns (round, conifer, tall oval) with per-tree green tints, a rare
+  // autumn tree and a wider size range. The kind comes from a hash of the planting spot, so it is
+  // deterministic and never touches any shared rng. Still instanced: one trunk mesh + three crowns.
+  const TREE_ROUND = [0x4db062, 0x5fba5a, 0x3f9f58, 0x6fbf62, 0x58a85a, 0x4a9d62];
+  const TREE_CONIFER = [0x2f7d4f, 0x2b6f49, 0x37865a, 0x2a7050];
+  const TREE_OVAL = [0x5bb15c, 0x76c066, 0x4fa85f];
+  const TREE_AUTUMN = [0xd98a3a, 0xc9553a, 0xe0b140];
   function addTrees(list, host) {   // v2.42: optional host group (suburb LOD)
     if (!list.length) return;
+    const kinds = list.map(v => {
+      const r = _mulberry(hashStr('tr' + Math.round(v[0]) + ',' + Math.round(v[1])));
+      const k = r(), sz = r(), tint = r(), autumn = r();
+      return { kind: k < .58 ? 0 : k < .80 ? 1 : 2, sz, tint, autumn: autumn < .06 };
+    });
+    const counts = [0, 0, 0]; kinds.forEach(k => counts[k.kind]++);
     const trunk = new THREE.InstancedMesh(new THREE.CylinderGeometry(.22, .3, 2.3, 6),
       new THREE.MeshLambertMaterial({ color: 0x6b4f3a }), list.length);
-    const can = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(2.0, 1),
-      new THREE.MeshLambertMaterial({ color: 0x4db062 }), list.length);
-    const mat4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3();
+    const geos = [new THREE.IcosahedronGeometry(2.0, 1), new THREE.ConeGeometry(1.55, 5.2, 7), new THREE.IcosahedronGeometry(1.45, 1)];
+    const crowns = geos.map((g, i) => counts[i] ? new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({ color: 0xffffff }), counts[i]) : null);
+    const mat4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), col = new THREE.Color();
+    const used = [0, 0, 0];
     list.forEach((v, i) => {
-      const sc = .8 + (i % 5) * .12;
-      mat4.compose(new THREE.Vector3(v[0] - AX, 1.15, v[1] - AZ), q.identity(), s.set(1, 1, 1));
+      const k = kinds[i], sc = .72 + k.sz * .85 + (k.sz > .93 ? .35 : 0);          // .72 .. 1.9, a few big ones
+      const th = k.kind === 1 ? .75 : 1;                                            // conifers keep a shorter trunk
+      mat4.compose(new THREE.Vector3(v[0] - AX, 1.15 * th, v[1] - AZ), q.identity(), s.set(th > .9 ? 1 : .8, th, th > .9 ? 1 : .8));
       trunk.setMatrixAt(i, mat4);
-      mat4.compose(new THREE.Vector3(v[0] - AX, 2.3 + 1.6 * sc, v[1] - AZ), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), (i * 2.4) % 6.28), s.set(sc, sc * 1.15, sc));
-      can.setMatrixAt(i, mat4);
+      const rot = q.setFromAxisAngle(up, (i * 2.4) % 6.28);
+      let y, sx, sy;
+      if (k.kind === 0) { y = 2.3 + 1.6 * sc; sx = sc; sy = sc * 1.15; }
+      else if (k.kind === 1) { y = 1.6 + 2.6 * sc * .9; sx = sc * .85; sy = sc * .9; }
+      else { y = 2.3 + 2.3 * sc; sx = sc * .8; sy = sc * 1.75; }
+      mat4.compose(new THREE.Vector3(v[0] - AX, y, v[1] - AZ), rot, s.set(sx, sy, sx));
+      const m = crowns[k.kind], j = used[k.kind]++;
+      m.setMatrixAt(j, mat4);
+      const pal = k.kind === 1 ? TREE_CONIFER : k.kind === 2 ? TREE_OVAL : TREE_ROUND;
+      col.set(k.autumn && k.kind !== 1 ? TREE_AUTUMN[Math.floor(k.tint * TREE_AUTUMN.length) % TREE_AUTUMN.length] : pal[Math.floor(k.tint * pal.length) % pal.length]);
+      m.setColorAt(j, col);
     });
-    can.castShadow = true;
-    trunk.position.set(AX, 0, AZ); can.position.set(AX, 0, AZ);   // v2.27
-    (host || group).add(trunk, can);
+    trunk.position.set(AX, 0, AZ);   // v2.27
+    (host || group).add(trunk);
+    crowns.forEach(c => { if (!c) return; c.castShadow = true; c.position.set(AX, 0, AZ); (host || group).add(c); });
   }
 
   // ---------- street furniture + parked cars ------------------------
