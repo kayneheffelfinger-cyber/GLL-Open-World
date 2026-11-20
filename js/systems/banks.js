@@ -254,13 +254,8 @@ export const BANK = (() => {
   function accOpts(sel, extra) { return accts().map(a => '<option value="' + a.id + '"' + (a.id === sel ? ' selected' : '') + '>' + esc(a.name) + ' · ' + fmt$(a.bal) + '</option>').join('') + (extra || ''); }
   function render() {
     const el = document.getElementById('bk-body'); if (!el) return;
-<<<<<<< HEAD
-    const b = B(), tabs = [['accounts', 'ACCOUNTS'], ['transfer', 'TRANSFER'], ['cards', 'CARDS'], ['statements', 'STATEMENTS'], ['ledger', 'LEDGER']];
-    let h = '<div class="bk-sum"><div><span>CASH</span><b>' + fmt$(STATE.money) + '</b></div><div><span>IN BANKS</span><b>' + fmt$(assets()) + '</b></div><div><span>OWED ON CARDS</span><b class="' + (owed() > 0 ? 'r' : '') + '">' + fmt$(owed()) + '</b></div><div class="bk-net"><span>NET WORTH</span><b>' + fmt$(net()) + '</b></div></div><div class="co-sub bk-clock">game day ' + day() + ' · month ' + (Math.floor(day() / MONTH) + 1) + '</div>' +
-=======
     const b = B(), tabs = [['accounts', 'ACCOUNTS'], ['transfer', 'TRANSFER'], ['cards', 'CARDS']].concat(sections.map(s => [s.id, s.label])).concat([['statements', 'STATEMENTS'], ['ledger', 'LEDGER']]);
-    let h = '<div class="co-wallet"><div><span class="k">CASH</span> <b>' + fmt$(STATE.money) + '</b><span class="co-sub"> · in banks ' + fmt$(assets()) + ' · owed on cards ' + fmt$(owed()) + (loansOwed() > 0 ? ' · loans ' + fmt$(loansOwed()) : '') + ' · <b>net ' + fmt$(net()) + '</b></span></div><div class="co-sub">game day ' + day() + ' · month ' + (Math.floor(day() / MONTH) + 1) + '</div></div>' +
->>>>>>> 659f043 (wip loans)
+    let h = '<div class="bk-sum"><div><span>CASH</span><b>' + fmt$(STATE.money) + '</b></div><div><span>IN BANKS</span><b>' + fmt$(assets()) + '</b></div><div><span>OWED ON CARDS</span><b class="' + (owed() > 0 ? 'r' : '') + '">' + fmt$(owed()) + '</b></div>' + (loansOwed() > 0 ? '<div><span>LOANS</span><b class="r">' + fmt$(loansOwed()) + '</b></div>' : '') + '<div class="bk-net"><span>NET WORTH</span><b>' + fmt$(net()) + '</b></div></div><div class="co-sub bk-clock">game day ' + day() + ' · month ' + (Math.floor(day() / MONTH) + 1) + '</div>' +
       '<div class="co-tabs">' + tabs.map(t => '<button class="co-tab' + (panelTab === t[0] ? ' on' : '') + '" data-bk="tab" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>';
     const sec = sections.find(s => s.id === panelTab);
     h += sec ? sec.html() : ({ accounts: accountsHTML, transfer: transferHTML, cards: cardsHTML, statements: statementsHTML, ledger: ledgerHTML }[panelTab] || accountsHTML)();

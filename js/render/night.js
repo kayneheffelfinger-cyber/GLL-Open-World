@@ -341,10 +341,12 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.82 — BANK POLISH', `
-    <p><b>The bank gets a proper look.</b></p>
-    <div class="kv"><span class="k">CARDS</span><span class="v">debit and credit card faces, the card you pay with marked, and a credit-use bar that runs green to red</span></div>
-    <div class="kv"><span class="k">NUMBERS</span><span class="v">cash, bank balance, card debt and net worth up top; statements and the ledger in clear grids</span></div>
+  openModal('Welcome to v2.83 — LOANS', `
+    <p><b>Borrow from the city banks.</b></p>
+    <div class="kv"><span class="k">LOANS</span><span class="v">interest, a minimum every 10 game days, pay more or PAY OFF — BANK &gt; LOANS</span></div>
+    <div class="kv"><span class="k">CREDIT SCORE</span><span class="v">300–850: sets your rate, how much you may owe, your card limits</span></div>
+    <div class="kv"><span class="k">FALL BEHIND</span><span class="v">grace period, late fee, credit drop, then bank and property seizure — always warned first</span></div>
+    <div class="kv"><span class="k">AWAY</span><span class="v">loan time only passes while you play: nothing comes due offline</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }
