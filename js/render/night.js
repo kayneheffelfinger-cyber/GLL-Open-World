@@ -341,11 +341,11 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.93 — SHORELINE', `
-    <p><b>Water edges get some life.</b></p>
-    <div class="kv"><span class="k">REEDS</span><span class="v">clumps of reeds standing in the shallows along coasts, lakes and rivers</span></div>
-    <div class="kv"><span class="k">ROCKS</span><span class="v">rock clusters on the bank</span></div>
-    <div class="kv"><span class="k">PIERS</span><span class="v">a few wooden piers reaching out over open water</span></div>
+  openModal('Welcome to v2.94 — ROAD SURFACES', `
+    <p><b>Roads stop being one black ribbon.</b></p>
+    <div class="kv"><span class="k">SURFACES</span><span class="v">fresh, weathered, concrete and chip-seal roads, with brick or stone on pedestrian streets, and segments resurfaced a shade apart</span></div>
+    <div class="kv"><span class="k">WEAR</span><span class="v">repair patches and cracks</span></div>
+    <div class="kv"><span class="k">CROSSWALKS</span><span class="v">zebra, thin-bar, ladder and ochre school-style crossings</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }

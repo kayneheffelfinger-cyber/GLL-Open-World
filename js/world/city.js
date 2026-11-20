@@ -355,7 +355,7 @@ export const CITY = (() => {
     const mark = { pos: [], norm: [], uv: [], col: [] };
     const walk = { pos: [], norm: [], uv: [], col: [] };
     const cAsph = colOf(0xffffff), cYel = colOf(0xe8c243), cWht = colOf(0xe8e4dc), cWalk = colOf(0xc4bcb0);
-    const cCurb = colOf(0xb3ab9e), cSeam = colOf(0xa39a8b), cCW = colOf(0xeceae2);
+    const cCurb = colOf(0xb3ab9e), cSeam = colOf(0xa39a8b), cCW = colOf(0xeceae2), cOchre = colOf(0xe3c46a);   // v2.94: ochre = a school-style crossing
     const cVerge = colOf(0x8f8a7c);   // v2.14: country gravel verge
     const cRamp = colOf(0xb9b1a5);    // v2.64: crossing-ramp concrete
     const UP = [0, 1, 0];
@@ -422,6 +422,21 @@ export const CITY = (() => {
 
     const manholes = [];
     const FINE = 2.75;
+    // v2.94 ROAD SURFACES: the asphalt texture is dark and multiplied by this vertex color, so a color
+    // above 1 lightens it. Each road rolls a surface type (own hash, no shared rng): fresh dark, weathered
+    // gray, pale concrete, warm chip-seal, and brick pavers or pale stone on pedestrian streets.
+    const SURF = [[1, 1, 1], [1.55, 1.55, 1.5], [3.4, 3.4, 3.3], [1.9, 1.45, 1.2]];
+    const surf = (rd, ri) => {
+      const h = hashStr('sf' + ri + (rd.name || '')) % 100;
+      if (rd.ped) return h < 70 ? [4.6, 2.4, 1.7] : [4.4, 4.2, 3.8];                     // brick pavers / pale stone
+      const cls = rd.cls || 1;
+      if (h < (cls >= 3 ? 56 : 52)) return SURF[0];
+      if (h < (cls >= 3 ? 86 : 80)) return SURF[1];
+      if (h < (cls >= 2 ? 94 : 92)) return SURF[2];
+      return SURF[3];
+    };
+    const cSeg = new THREE.Color(), PCOL = [0x24282c, 0x2c3035, 0x585d63, 0x4a4f55];
+    let patches = 0;
     roads.forEach((rd, ri) => {
       const pts = rd.pts;
       // v2.64: per-road micro height (unique by construction) — co-class
@@ -429,7 +444,12 @@ export const CITY = (() => {
       // the ramp (.049+) and marking (.054+) layers below.
       const yJ = roads.length ? (ri / roads.length) * .007 : 0;
       const y = (rd.cls === 3 ? .030 : rd.cls === 2 ? .034 : .038) + yJ;
-      for (let i = 0; i < pts.length - 1; i++) rib(asph, pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], rd.w, y, cAsph, 3.2, 3.2);
+      const sb = surf(rd, ri);
+      for (let i = 0; i < pts.length - 1; i++) {
+        const jt = .93 + (hashStr('sj' + ri + ',' + i) % 100) / 100 * .14;   // a segment resurfaced a shade off its neighbor
+        cSeg.setRGB(sb[0] * jt, sb[1] * jt, sb[2] * jt);
+        rib(asph, pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], rd.w, y, cSeg, 3.2, 3.2);
+      }
       if (rd.country) {
         // v2.14: country highway — no sidewalks, no curbs: gravel verges
         // (v2.64: verge strips skip the crossing square — two country
@@ -612,6 +632,27 @@ export const CITY = (() => {
           }
         }
       }
+      // v2.94: repair patches and cracks — flat decals just above the asphalt, never in a junction
+      if (!rd.ped) for (let i = 0; i < pts.length - 1 && patches < 520 * mobF; i++) {
+        const [ax, az] = pts[i], [bx, bz] = pts[i + 1];
+        const len = Math.hypot(bx - ax, bz - az);
+        if (len < 18) continue;
+        const hp = hashStr('pt' + ri + ',' + i);
+        if (hp % 100 >= 16) continue;
+        const ux = (bx - ax) / len, uz = (bz - az) / len, px = -uz, pz = ux;
+        const d = 5 + ((hp >> 8) % 100) / 100 * (len - 10), lat = (((hp >> 16) % 100) / 100 - .5) * rd.w * .5;
+        const cx = ax + ux * d + px * lat, cz = az + uz * d + pz * lat;
+        if (inJunction(cx, cz, ri, 3.2)) continue;
+        if ((hp >> 4) % 3) {                                                          // a patch (2 in 3), else a crack
+          const L = 2.4 + ((hp >> 12) % 10) * .35, W = Math.min(rd.w * .42, 1.7 + ((hp >> 20) % 10) * .1);
+          rib(mark, cx - ux * L / 2, cz - uz * L / 2, cx + ux * L / 2, cz + uz * L / 2, W, .0515, cSeg.set(PCOL[(hp >> 2) % PCOL.length]));
+        } else {
+          const L = 3 + ((hp >> 12) % 10) * .5, a = (((hp >> 20) % 10) - 5) * .09, ca = Math.cos(a), sa = Math.sin(a);
+          const vx = ux * ca - uz * sa, vz = ux * sa + uz * ca;
+          rib(mark, cx, cz, cx + vx * L, cz + vz * L, .08, .0518, cSeg.set(0x1c1f22));
+        }
+        patches++;
+      }
     });
 
     // ---------- zebra crosswalks at road intersections ---------------
@@ -665,13 +706,21 @@ export const CITY = (() => {
         const tt = (bx - p1[0]) * ux + (bz - p1[1]) * uz;
         if (tt < 1.5 || tt > slen - 1.5) continue;
         const span = Math.max(3, Math.min(R.w - 3.4, 6.4));
-        const n = Math.max(3, Math.round(span / .92));
+        // v2.94 CROSSWALK STYLES (a hash of the junction): zebra 55%, thin continental 18%, ladder 15%, ochre 12%
+        const cwh = hashStr('cw' + Math.round(m.x) + ',' + Math.round(m.z)) % 100, cwSty = cwh < 55 ? 0 : cwh < 73 ? 1 : cwh < 88 ? 2 : 3;
+        const n = cwSty === 1 ? Math.max(4, Math.round(span / .62)) : cwSty === 2 ? Math.max(2, Math.round(span / 1.5)) : Math.max(3, Math.round(span / .92));
+        const cwc = cwSty === 3 ? cOchre : cCW, bw = cwSty === 1 ? .3 : cwSty === 2 ? .32 : .5;
         for (let k = 0; k < n; k++) {
           if (stripes >= 1500) break;   // v2.64: 620→1500 (more painted junctions downtown)
           const q = -span / 2 + (n > 1 ? span * k / (n - 1) : 0);
           const cxk = bx + ux * q, czk = bz + uz * q;
           rib(mark, cxk - prx * stripeLen / 2, czk - prz * stripeLen / 2,
-            cxk + prx * stripeLen / 2, czk + prz * stripeLen / 2, .5, .062, cCW);
+            cxk + prx * stripeLen / 2, czk + prz * stripeLen / 2, bw, .062, cwc);
+          stripes++;
+        }
+        if (cwSty === 2 && stripes < 1500) for (const rs of [1, -1]) {              // the two rails of a ladder crossing
+          const rx = bx + prx * (stripeLen / 2) * rs, rz = bz + prz * (stripeLen / 2) * rs;
+          rib(mark, rx - ux * span / 2, rz - uz * span / 2, rx + ux * span / 2, rz + uz * span / 2, .22, .0625, cCW);
           stripes++;
         }
       }
