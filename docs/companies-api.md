@@ -24,7 +24,8 @@ The only request an unsupporting server ever sees. The client sends it only when
 ```json
 { "enabled": true, "protocol": 1, "minProtocol": 1,
   "rules": { "foundingMinNetWorth": 10000, "foundingFee": 2000, "maxMembers": 10, "stocks": true,
-             "incomeCapPerBizPerDay": 5000, "dailyPriceBand": 0.10, "maxOrderPctOfFloat": 10,
+             "incomeCapPerPlayerPerDay": 300, "incomeBurst": 600, "incomeCapPerCompanyPerDay": 3000,
+             "dailyPriceBand": 0.10, "maxOrderPctOfFloat": 10,
              "maxPositionPct": 49, "ordersPerMinute": 20, "issueMaxPctPer24h": 20, "dividendMaxPctOfPrice": 25 },
   "me": { "id": "p_1", "name": "Alice" } }
 ```
@@ -96,6 +97,22 @@ Errors: `already_member` (one company per player), `bad_name` (3–32 chars, no 
 
 ### Read: `GET api/companies/{cid}` → `{ "company": <Company> }` (`not_a_member` 403 otherwise)
 
+### Delete: `DELETE api/companies/{cid}` `{ "requestId": "..." }`
+Owner only. Allowed **only when the company is empty**:
+- the bank balance is exactly 0,
+- there are no open orders in its stock (from anyone) and no pending dividends or issues,
+- the owner holds 100% of the shares: none held by other players and none in the treasury,
+- the owner is the only member (no other members and no pending invites; pending invites may simply be revoked as part of the delete).
+
+Otherwise `409 company_not_empty` with `error.details` naming what is left, e.g. `{ "bank": 1250.40, "otherMembers": 3, "outsideShares": 120000, "treasuryShares": 0, "openOrders": 2 }`, so the client can tell the owner exactly what to clear. To close a company the owner first pays out or withdraws the bank, buys back outside shares (or pays a final dividend and buys back), removes the members and cancels orders.
+
+On success, in one transaction: the shares are cancelled, the stock is delisted (its ticker stops trading and is freed after a cooling period, recommended 30 days, so it cannot be re-used for impersonation straight away), the company's businesses go back to their owners, and the company is marked deleted. **Ledger, cap-table history and audit rows are kept** (never deleted). `200 {}`. Errors: `forbidden` (not the owner), `company_not_empty`, `frozen` (a moderator froze it), `not_found`.
+
+The client does not offer DELETE yet. The endpoint is specified now so the server can build it with the rest; a client button is an additive change.
+
+### Moderation (Gamble Limited only)
+Moderators (Gamble Limited staff, identified server-side, never by anything in a request body) can **rename** a company (name and/or ticker), **freeze** it (no withdrawals, deposits, dividends, issues, role changes or business moves; members can still read), **halt** its stock, **unfreeze/unhalt**, and **delete** it regardless of the empty rule (a moderator delete settles the bank and shares by a documented policy, for example pro-rata to shareholders, and records it in the ledger). Players, including owners, cannot do any of these. Every moderator action is audit-logged (moderator id, target, reason, before/after, time) and shows to members as a ledger/notice line. A frozen or halted company reports `frozen: true` / `halted: true` in `<Company>` and quotes; affected calls return `423 frozen` or `halted`. The moderator API itself is internal to the hosted site and is not part of this client protocol.
+
 ### Roles and permissions
 Fixed role ids: `owner`, `admin`, `manager`, `member`. Permissions: `invite`, `remove_members` (also removes other members' businesses), `manage_roles`, `view_ledger`, `withdraw`, `manage_stock`. Every member may assign **their own** businesses.
 - `PUT api/companies/{cid}/roles/{roleId}` `{ "permissions": ["view_ledger","withdraw"], "withdrawLimit": 100 }`. Needs `manage_roles`. `owner` is immutable and `manage_roles` can never be granted to other roles. `withdrawLimit` is dollars per rolling 24 h.
@@ -110,7 +127,9 @@ Only carts are supported in protocol 1 (offices, rigs etc. are not moved under c
 - `POST api/companies/{cid}/businesses` `{ "bizId": "plot-17", "name": "...", "city": "...", "kind": "cart" }` → `201 {}`. The business is keyed `(playerId, bizId)`, so two players with the same local plot id never collide. Error `already_assigned`.
 - `DELETE api/companies/{cid}/businesses/{bizId}`: the owner, or a member with `remove_members`. Error `forbidden`/`not_found`.
 
-From the moment a business is assigned the client stops crediting its sales to cash and reports them to the bank (section 6). On removal the client returns any unreported held income to the owner.
+From the moment a business is assigned the client stops crediting its live sales to cash and reports them to the bank (section 6). On removal the client returns any unreported held income to the owner.
+
+**Known gap in the current client:** offline income (the "Night Shift", `js/render/night.js`, which pays a crewed cart's vendors while the player is away, capped at 24 h) is still credited to the player's **own cash** even for an assigned cart, and is never reported to the company. So the server only ever sees live-play income, which keeps the caps in section 6 valid. Whether offline income should go to the company is a game-design decision for a later protocol version.
 
 ## 6. The bank and ledger
 
@@ -122,6 +141,47 @@ From the moment a business is assigned the client stops crediting its sales to c
 ```
   → `200 { "accepted": [ { "bizId","seq","amount" } ], "rejected": [ { "bizId","seq","amount","reason": "not_assigned|over_cap|bad_amount" } ], "balance": 4451.75 }`.
   The client holds each assigned business's sales and sends one batch about every 20 s; `seq` is a per-business counter that only increases; the batch is saved locally and **re-sent verbatim** until answered (the same `batchId` returns the stored answer). Rejected amounts are credited back to the player's cash by the client, so a rejection costs the player nothing and a cheater gains nothing beyond the cap.
+
+### Income ceilings: how much a cart can really earn
+
+Reporting cadence: one batch about every **20 s** of real time (`INCOME_MS = 20000`, `js/systems/companies.js:21`), only while the player is playing in a city. A game day is **90 s** real time, so 40 game days = 1 real hour.
+
+How live cart income works (all line numbers at v2.97):
+- **Customers are shared, not per cart.** One customer spawns every 4.5 to 8.0 s (uniform; `ECON.custSpawnMin/Max`, `js/config.js:101`) for the **whole active city**, and goes to one random powered cart (`js/systems/eco.js:360–362`). More carts do not bring more customers; they split the same stream. Carts only run in the city the player is standing in (`eco.js:751`), so one player has one stream at a time.
+- **Ticket per customer** = one menu item + a tip of $0.80 to $2.60 (`eco.js:340`, `config.js:99`). The most expensive item is Pizza's "Whole pie" at $24.00 (`config.js:121`), so the largest single sale is **$26.60**. The best cuisine on average is Sushi: average item $11.57 + average tip $1.70 = **$13.27** a sale.
+- **Serving** is manual (E key) or by hired vendors, at most one serve per vendor every 2.6 s at 5 stars (`eco.js:397`). Serving can't exceed arrivals. Each cart queues at most 5 customers (`eco.js:280`), who leave after 26 s (`config.js:102`).
+- **Time never runs faster than real time:** each frame advances at most 0.05 s (`js/render/night.js:773`). There is no fast-forward.
+
+| Per player, all their carts combined | per 20 s batch | per 90 s game day | per real hour |
+|---|---|---|---|
+| Typical (mean arrivals 9.6/min × $13.27) | ~$42 | ~$191 | ~$7,640 |
+| Hard ceiling (an arrival every 4.5 s, every sale $26.60) | ~$560* | $532 | $21,280 |
+
+\* Burst: one 20 s batch can also contain customers who spawned earlier and were still walking or queueing. A customer spawns up to 90 m away and walks at 1.9 m/s or more (`eco.js:288`, `eco.js:298`), so up to ~47 s, then waits up to 26 s. So a batch holds at most the arrivals of the last ~93 s: 21 sales × $26.60 = $558.60. Over any window of a few minutes the per-day and per-hour rows apply.
+
+The hard ceiling is not reachable in practice (it needs every customer to buy the rarest, dearest item at the top tip, at the fastest spawn every time). An honest player's long-run maximum is the typical row.
+
+**Recommended caps** (the `rules` in section 2), enforced as token buckets:
+- `incomeCapPerPlayerPerDay: 300` per 90 s game day (about $12,000 per real hour, roughly 1.6× the best honest average), with `incomeBurst: 600` (two game days, above the ~$560 largest possible single batch) so lucky streaks and the 20 s batching never trip it. **Cap per player across all their assigned carts**, not per cart: the customers are shared, so 10 carts earn no more than 1.
+- The per-business cap is the same number (one cart can take the whole stream); it only matters if a player assigns carts to different companies, which protocol 1 doesn't allow (one company per player).
+- `incomeCapPerCompanyPerDay: 3000` per game day (`maxMembers` 10 × 300).
+- Newly assigned carts: a probation cap of half the normal rate for the first 24 real hours is reasonable.
+
+(The test-only mock, `scripts/companies-mock.mjs`, still uses the older single per-business example `incomeCapPerBizPerDay: 5000` so its tests run fast. Build the real server to the numbers above, not the mock's.)
+
+If balance changes raise prices, tips or the spawn rate, recompute these numbers. They are derived only from `ECON` and the cuisine menus in `js/config.js`.
+
+### What the server can check from the synced save
+
+The server already receives the player's save (`api/save`, a JSON pack). For carts it contains, per plot (`js/save.js`, `plots[]`): `id` (the `bizId`), `cityKey`, `cityName`, `cart.cuisine` (which menu), and `crew[]` with each vendor's `stars`. From this the server can, **by itself**:
+- confirm the reporter really owns that plot and that it **has a cart** (reject reports for plots without one);
+- look up that cuisine's menu (the table is static in `js/config.js`) and compute that cart's own maximum ticket (`max item + $2.60`) and average ticket, then cap that business at **its** cuisine's ceiling. A Coffee cart (max item $6) can never send Pizza-sized numbers;
+- check the time between batches: a sum over a window must fit `arrivals × max ticket` for that window;
+- spot carts in several cities reporting at once (one player has one active city), or reports with no recent save sync at all.
+
+What stays **client-only** and can't be verified: which customers actually arrived, which items they picked, the tips, and whether the player was really in that city. So a modified client can still report believable income up to the cap. Keep the cap tight (per cuisine and per player), and treat reported income as the soft spot of the economy.
+
+**Balancing note:** dividends and the share price's fundamental value (section 8) are built from reported income, so keep `dividendMaxPctOfPrice` and `dailyPriceBand` conservative, and consider weighting the fundamental towards the bank balance (money already inside the server) rather than reported income alone.
 - **Member deposit** `POST api/companies/{cid}/bank/deposits` `{ "amount": 250, "memo": "optional", "requestId": "..." }` → `201 { "balance", "wallet": <Wallet> }`. Any member moves money from their **exchange wallet** into the company bank (ledger type `member_deposit`). Errors: `insufficient_wallet`, `bad_request`, `not_a_member`. (Added after protocol 1 shipped; additive, so `protocol` stays 1. The single-player Bank panel uses it for transfers between a player's own bank accounts and the company bank.)
 - **Withdrawal** `POST api/companies/{cid}/bank/withdrawals` `{ "amount": 8, "memo": "lunch", "requestId": "..." }` → `200 { "withdrawal": { "id","amount" }, "balance", "wallet": <Wallet> }`. Needs `withdraw`; money goes to the caller's **exchange wallet**, and the role's 24 h limit applies. Errors: `forbidden`, `over_limit`, `insufficient_bank`, `bad_request`.
 
@@ -165,7 +225,11 @@ The client is untrusted. Everything below is enforced by the server regardless o
 
 **Idempotency.** `requestId` (per player) makes every money/share/membership `POST` replay-safe; income batches are idempotent by `batchId` and per-business `seq` (a `seq` at or below the stored one is ignored).
 
-**Income validation.** Accept income only from a business assigned to that company **and** owned by the reporter. Cap each business with a token bucket sized from the game's real maximum earn rate (e.g. `incomeCapPerBizPerDay` per 90 s game day, burst 2×) and cap per company per day; reject (not clip silently) the excess with `over_cap`. Reject non-finite, negative or absurdly large amounts and batches older than a set age. Compare reported income with the player's synced saves over time and flag outliers. Newly assigned businesses get a probation cap.
+**Income validation.** Accept income only from a business assigned to that company **and** owned by the reporter, and only for a plot that has a cart in the player's latest synced save. Cap with token buckets sized from the game's real earn rate (section 6, "Income ceilings"): **per player across all their carts** (`incomeCapPerPlayerPerDay` per 90 s game day, burst `incomeBurst`), per business at its own cuisine's ceiling, and per company (`incomeCapPerCompanyPerDay`). Reject (not clip silently) the excess with `over_cap`. Reject non-finite, negative or absurdly large amounts (a single 20 s batch above about $560 for one player is impossible) and batches older than a set age. Compare reported income with the player's synced saves over time and flag outliers. Newly assigned businesses get a probation cap.
+
+**Moderation.** Only Gamble Limited moderators can rename, freeze, unfreeze, halt, unhalt or force-delete a company (section 5, "Moderation"). Players and owners cannot. Moderator identity is decided server-side. Every action is audit-logged with the moderator, reason and before/after values.
+
+**Company deletion.** Owner-only and only when empty (section 5, "Delete"): bank 0, no open orders, owner holds 100% of shares, no other members. Delisting, share cancellation and the deleted flag happen in one transaction. Ledger, cap-table history and audit rows are never deleted. Freed tickers get a cooling period before re-use.
 
 **Wallet deposits.** Credit only after `confirm` and only when the **stored synced save** shows cash reduced by at least the amount (minus income tolerance). One deposit per `requestId`; expire pending ones; per-day deposit and withdrawal limits; never credit from a client assertion alone. Because saves are client-authored, treat wallet money as the exposure and bound it with limits and monitoring.
 
@@ -190,7 +254,7 @@ Do these **before** setting `enabled: true` in production. Not done now: `privac
 
 1. **Privacy: data collected.** The hosted site now stores, per player, for companies: GLL ID name, company membership and role, invites sent and received, the business ids/names/cities assigned, bank ledger entries (with member names), wallet balance and deposits/withdrawals, orders, fills, share positions, dividends, and audit logs including IP and timestamps. State retention periods and who can see what (members see the company's members, businesses and ledger; all players see tickers, prices, the order book and the company name; the cap table shows holders' GLL ID names).
 2. **Privacy: server-side computation.** Say the server reads the synced save to compute net worth for founding and to validate deposits and income, and that the game uploads income reports for businesses placed in a company.
-3. **Privacy: sharing and deletion.** Say names are visible to other players, how to leave/delete (leaving a company, NEW GAME deleting the account save; what happens to a deleted player's shares, orders, bank contributions and ledger rows: recommend retain pseudonymised ledger rows, liquidate or transfer the shares).
+3. **Privacy: sharing and deletion.** Say names are visible to other players, how to leave/delete (leaving a company; an owner deleting an empty company, whose ledger and audit rows are kept; NEW GAME deleting the account save; what happens to a deleted player's shares, orders, bank contributions and ledger rows: recommend retain pseudonymised ledger rows, liquidate or transfer the shares).
 4. **Terms: play money only.** Company bank, wallet, shares, dividends and prices are play money with no cash value; no real-money deposit, withdrawal, trade or transfer; shares are not securities or investments.
 5. **Terms: conduct.** Prohibit wash trading, price manipulation, collusion, multi-accounting, impersonation, offensive names, exploiting bugs; state that Gamble Limited may halt stocks, freeze banks, reverse or void trades, remove members/companies and suspend accounts, and that the server's records are authoritative.
 6. **Terms: availability.** Companies and stocks may be paused, reset or changed without notice; balances may be adjusted for abuse or rollbacks.
