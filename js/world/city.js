@@ -42,6 +42,7 @@ import { STATE } from '../state.js';   // v2.66 PICTURE: the DETAIL lever — LI
 export const CITY = (() => {
   const WIN = 3.2;                      // meters per window cell
   let group, plotGroup;
+  let propGroup = null, treeGroup = null;   // v2.97 PROP LOD: small props / trees live in these two child groups so one flag hides them from a high camera (systems/proplod.js)
   let roads = [], plotRecs = [], suites = [];
   let bHash = null, rHash = null;       // spatial hashes
   let buildingPolys = [];
@@ -353,6 +354,7 @@ export const CITY = (() => {
   function buildRoads(city) {
     const asph = { pos: [], norm: [], uv: [], col: [] };
     const mark = { pos: [], norm: [], uv: [], col: [] };
+    const wear = { pos: [], norm: [], uv: [], col: [] };   // v2.97: patches + cracks — their own mesh, hidden from a high camera
     const walk = { pos: [], norm: [], uv: [], col: [] };
     const cAsph = colOf(0xffffff), cYel = colOf(0xe8c243), cWht = colOf(0xe8e4dc), cWalk = colOf(0xc4bcb0);
     const cCurb = colOf(0xb3ab9e), cSeam = colOf(0xa39a8b), cCW = colOf(0xeceae2), cOchre = colOf(0xe3c46a);   // v2.94: ochre = a school-style crossing
@@ -645,11 +647,11 @@ export const CITY = (() => {
         if (inJunction(cx, cz, ri, 3.2)) continue;
         if ((hp >> 4) % 3) {                                                          // a patch (2 in 3), else a crack
           const L = 2.4 + ((hp >> 12) % 10) * .35, W = Math.min(rd.w * .42, 1.7 + ((hp >> 20) % 10) * .1);
-          rib(mark, cx - ux * L / 2, cz - uz * L / 2, cx + ux * L / 2, cz + uz * L / 2, W, .0515, cSeg.set(PCOL[(hp >> 2) % PCOL.length]));
+          rib(wear, cx - ux * L / 2, cz - uz * L / 2, cx + ux * L / 2, cz + uz * L / 2, W, .0515, cSeg.set(PCOL[(hp >> 2) % PCOL.length]));
         } else {
           const L = 3 + ((hp >> 12) % 10) * .5, a = (((hp >> 20) % 10) - 5) * .09, ca = Math.cos(a), sa = Math.sin(a);
           const vx = ux * ca - uz * sa, vz = ux * sa + uz * ca;
-          rib(mark, cx, cz, cx + vx * L, cz + vz * L, .08, .0518, cSeg.set(0x1c1f22));
+          rib(wear, cx, cz, cx + vx * L, cz + vz * L, .08, .0518, cSeg.set(0x1c1f22));
         }
         patches++;
       }
@@ -741,6 +743,7 @@ export const CITY = (() => {
     mk(asph, getAsphTex());      // noise-grained asphalt (color from texture)
     mk(walk, null, true);        // DoubleSide: safe curb faces
     mk(mark, null, false);
+    if (wear.pos.length) { const wm = mk(wear, null, false); propGroup.add(wm); }   // v2.97: mk() parents to the city group — re-parent the wear decals into the prop group
 
     // manhole covers (instanced)
     if (manholes.length) {
@@ -750,7 +753,7 @@ export const CITY = (() => {
       const mat4 = new THREE.Matrix4();
       for (let i = 0; i < n; i++) { mat4.identity(); mat4.setPosition(manholes[i][0] - AX, .045, manholes[i][1] - AZ); inst.setMatrixAt(i, mat4); }
       inst.position.set(AX, 0, AZ);   // v2.27: city-local instances
-      group.add(inst);
+      propGroup.add(inst);   // v2.97: small prop — hidden from a high camera
     }
   }
 
@@ -1198,7 +1201,7 @@ export const CITY = (() => {
       });
       inst.castShadow = true;
       inst.position.set(AX, 0, AZ);   // v2.27: city-local instances
-      group.add(inst);
+      propGroup.add(inst);   // v2.97: rooftop HVAC
     }
     // rooftop water tanks (NYC style)
     if (tanks.length) {
@@ -1213,7 +1216,7 @@ export const CITY = (() => {
       });
       inst.castShadow = true;
       inst.position.set(AX, 0, AZ); cap.position.set(AX, 0, AZ);   // v2.27
-      group.add(inst, cap);
+      propGroup.add(inst, cap);   // v2.97: water tanks
     }
     // antenna masts
     if (antennas.length) {
@@ -1231,7 +1234,7 @@ export const CITY = (() => {
         tip.setMatrixAt(i, mat4);
       });
       inst.position.set(AX, 0, AZ); tip.position.set(AX, 0, AZ);   // v2.27: city-local instances
-      group.add(inst, tip);
+      propGroup.add(inst, tip);   // v2.97: antennas
     }
     buildStats = {
       pitched: pitchedRects.length, tiered: nTier, suites: suites.length, painted: nPainted, buildings: nBld, paintedAt,   // v2.88: painted-wall census
@@ -1439,7 +1442,7 @@ export const CITY = (() => {
       const mat4 = new THREE.Matrix4();
       for (let i = 0; i < n; i++) { mat4.identity(); mat4.setPosition(bolls[i][0] - AX, .55, bolls[i][1] - AZ); inst.setMatrixAt(i, mat4); }
       inst.position.set(AX, 0, AZ);   // v2.27: city-local instances
-      group.add(inst);
+      propGroup.add(inst);   // v2.97: bollards
     }
   }
 
@@ -1482,8 +1485,9 @@ export const CITY = (() => {
       m.setColorAt(j, col);
     });
     trunk.position.set(AX, 0, AZ);   // v2.27
-    (host || group).add(trunk);
-    crowns.forEach(c => { if (!c) return; c.castShadow = true; c.position.set(AX, 0, AZ); (host || group).add(c); });
+    const th = treeGroup || host || group;   // v2.97: city AND suburb trees ride the tree group, hidden from a high camera
+    th.add(trunk);
+    crowns.forEach(c => { if (!c) return; c.castShadow = true; c.position.set(AX, 0, AZ); th.add(c); });
   }
 
   // ---------- street furniture + parked cars ------------------------
@@ -1571,7 +1575,7 @@ export const CITY = (() => {
           blade.setColorAt(i * 5 + b, c.set(RC[(Math.floor(r * RC.length) + b) % RC.length]));
         }
       }
-      blade.position.set(AX, 0, AZ); group.add(blade); shoreRec.reeds = reedN;
+      blade.position.set(AX, 0, AZ); propGroup.add(blade); shoreRec.reeds = reedN;
     }
     if (rockN) {
       const rock = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.5, 0), new THREE.MeshLambertMaterial({ color: 0xffffff }), rockN);
@@ -1582,7 +1586,7 @@ export const CITY = (() => {
         mat4.compose(new THREE.Vector3(x - AX, .1 + sy * .12, z - AZ), q, new THREE.Vector3(sx, sy, sz));
         rock.setMatrixAt(i, mat4); rock.setColorAt(i, c.set(KC[Math.floor(k * KC.length) % KC.length]));
       }
-      rock.castShadow = true; rock.position.set(AX, 0, AZ); group.add(rock); shoreRec.rocks = rockN;
+      rock.castShadow = true; rock.position.set(AX, 0, AZ); propGroup.add(rock); shoreRec.rocks = rockN;
     }
     if (piers.length) {
       const deck = new THREE.InstancedMesh(new THREE.BoxGeometry(2.2, .16, 8.7), new THREE.MeshLambertMaterial({ color: 0x9a7650 }), piers.length);
@@ -1597,7 +1601,7 @@ export const CITY = (() => {
           mat4.compose(new THREE.Vector3(px - AX, .6, pz - AZ), q.identity(), new THREE.Vector3(1, 1.15, 1)); post.setMatrixAt(i * 6 + pi++, mat4);
         }
       });
-      deck.castShadow = true; deck.position.set(AX, 0, AZ); post.position.set(AX, 0, AZ); group.add(deck, post); shoreRec.piers = piers.length;
+      deck.castShadow = true; deck.position.set(AX, 0, AZ); post.position.set(AX, 0, AZ); propGroup.add(deck, post); shoreRec.piers = piers.length;
     }
   }
 
@@ -1654,7 +1658,7 @@ export const CITY = (() => {
           cc.set(POLE_COLS[hsh(armL[i], 'pc') % POLE_COLS.length]); pole.setColorAt(i, cc); arm.setColorAt(i, cc);
         }
         pole.position.set(AX, 0, AZ); arm.position.set(AX, 0, AZ); head.position.set(AX, 0, AZ);   // v2.27
-        group.add(pole, arm, head);
+        propGroup.add(pole, arm, head);
       }
       if (globeL.length) {                                  // short post-top globe lamps
         const m = globeL.length;
@@ -1668,7 +1672,7 @@ export const CITY = (() => {
           cc.set(POLE_COLS[hsh(globeL[i], 'pc') % POLE_COLS.length]); gpole.setColorAt(i, cc);
         }
         gpole.position.set(AX, 0, AZ); globe.position.set(AX, 0, AZ);
-        group.add(gpole, globe);
+        propGroup.add(gpole, globe);
       }
     }
 
@@ -1708,7 +1712,7 @@ export const CITY = (() => {
         body.setColorAt(i, hc.set(hcol)); cap.setColorAt(i, hc.set(hcol).multiplyScalar(.78));
       }
       body.position.set(AX, 0, AZ); cap.position.set(AX, 0, AZ);   // v2.27
-      group.add(body, cap);
+      propGroup.add(body, cap);
     }
 
     // -- trash bins beside every other lamp (v2.91: round steel bins and square colored recycling bins) --
@@ -1727,7 +1731,7 @@ export const CITY = (() => {
           new THREE.MeshLambertMaterial({ color: 0x3d444a }), rd2.length);
         for (let i = 0; i < rd2.length; i++) { mat4.identity(); mat4.setPosition(rd2[i][0] - AX, .58, rd2[i][1] - AZ); inst.setMatrixAt(i, mat4); }
         inst.position.set(AX, 0, AZ);   // v2.27: city-local instances
-        group.add(inst);
+        propGroup.add(inst);
       }
       if (sq.length) {
         const SQC = [0x2f6b4a, 0x2a4f7a, 0x3d444a, 0x7a6a2a];
@@ -1740,7 +1744,7 @@ export const CITY = (() => {
           inst.setColorAt(i, bc.set(SQC[hashStr('bq' + Math.round(sq[i][0]) + ',' + Math.round(sq[i][1])) % SQC.length]));
         }
         inst.position.set(AX, 0, AZ); lid.position.set(AX, 0, AZ);
-        group.add(inst, lid);
+        propGroup.add(inst, lid);
       }
       // v2.91: newspaper boxes and planters, beside some lamps (re-checked against buildings, plots and asphalt)
       const nb = [], pl = [];
@@ -1757,7 +1761,7 @@ export const CITY = (() => {
           mat4.compose(new THREE.Vector3(nb[i][0] - AX, .5, nb[i][1] - AZ), q, new THREE.Vector3(1, 1, 1)); box.setMatrixAt(i, mat4);
           box.setColorAt(i, bc.set(NBC[hashStr('nc' + Math.round(nb[i][0]) + ',' + Math.round(nb[i][1])) % NBC.length]));
         }
-        box.position.set(AX, 0, AZ); group.add(box);
+        box.position.set(AX, 0, AZ); propGroup.add(box);
       }
       if (pl.length) {
         const tub = new THREE.InstancedMesh(new THREE.BoxGeometry(.95, .55, .95), new THREE.MeshLambertMaterial({ color: 0x8c8a84 }), pl.length);
@@ -1767,7 +1771,7 @@ export const CITY = (() => {
           mat4.compose(new THREE.Vector3(pl[i][0] - AX, .85, pl[i][1] - AZ), q.identity(), new THREE.Vector3(1.1, .85, 1.1)); shrub.setMatrixAt(i, mat4);
           shrub.setColorAt(i, bc.set([0x4a9d4a, 0x5fae52, 0x3d8a52, 0x7aa84a][hashStr('pc' + Math.round(pl[i][0])) % 4]));
         }
-        tub.position.set(AX, 0, AZ); shrub.position.set(AX, 0, AZ); group.add(tub, shrub);
+        tub.position.set(AX, 0, AZ); shrub.position.set(AX, 0, AZ); propGroup.add(tub, shrub);
       }
     }
 
@@ -1817,7 +1821,7 @@ export const CITY = (() => {
       });
       seat.castShadow = true;
       seat.position.set(AX, 0, AZ); back.position.set(AX, 0, AZ); leg.position.set(AX, 0, AZ);   // v2.27
-      group.add(seat, back, leg);
+      propGroup.add(seat, back, leg);
     }
 
     // -- parked cars along the curbs (yellow taxis in tier-3 cities) --
@@ -1875,7 +1879,7 @@ export const CITY = (() => {
       }
       body.castShadow = true;
       body.position.set(AX, 0, AZ); cab.position.set(AX, 0, AZ); wheels.position.set(AX, 0, AZ);   // v2.27
-      group.add(body, cab, wheels);
+      propGroup.add(body, cab, wheels);
     }
   }
 
@@ -3417,6 +3421,7 @@ export const CITY = (() => {
     cityRec = { ...cityData, ...cityMeta };
     SUB_R0 = cityData.source === 'osm' ? 585 : 865;   // v2.74: real OSM data spans ±360 m (≤510 m corner), so the neighborhoods start right at its edge
     group = new THREE.Group();
+    propGroup = new THREE.Group(); treeGroup = new THREE.Group(); group.add(propGroup, treeGroup);   // v2.97
     const shift = pts => pts.map(p => [p[0] + ax, p[1] + az]);
     roads = cityData.roads.map(r => ({ ...r, pts: shift(r.pts) }));
     // v2.74 ORGANIC DOWNTOWN EDGE: real OSM data arrives as a ±360 m square,
@@ -3679,6 +3684,7 @@ export const CITY = (() => {
     gates = [];   // v2.14
     suburbRec = null; suburbGroup = null;   // v2.42
     shoreRec = null;                        // v2.93
+    propGroup = null; treeGroup = null;     // v2.97
     cityRec = null; cityAnchor = null;   // v2.15: no stale city state after dispose
   }
   let _winMat = null;
@@ -3745,6 +3751,7 @@ export const CITY = (() => {
     get rec() { return cityRec; },
     get anchor() { return cityAnchor; },
     get buildingPolys() { return buildingPolys; },   // v2.21: world-space, water-filtered — the dense-core spawn reads this
+    get propGroup() { return propGroup; }, get treeGroup() { return treeGroup; },   // v2.97: the LOD groups (systems/proplod.js)
     get shore() { return shoreRec; },                // v2.93: the shoreline census (pts/reeds/rocks/piers)
     get suburb() { return suburbRec; },              // v2.42: the neighborhood census (houses/verts/trees…)
     get suburbGroup() { return suburbGroup; },       // v2.42: distance-LOD host

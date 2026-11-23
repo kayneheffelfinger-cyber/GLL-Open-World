@@ -141,7 +141,7 @@ export const TRAFFIC = (() => {
     cab.position.set(A.x, 0, A.z);
     wheels.position.set(A.x, 0, A.z);
     recStamp = rec;
-    group.add(body, cab, wheels);
+    (CITY.propGroup || group).add(body, cab, wheels);   // v2.97: with the other small props, so a high camera hides the fleet
     return n;
   }
 
@@ -198,7 +198,9 @@ export const TRAFFIC = (() => {
   function update(dt) {
     if (!body || !cars.length) return;
     // self-heal: the city was torn down (or replaced) under us
-    if (!CITY.group || CITY.rec !== recStamp || body.parent !== CITY.group) { clear(); return; }
+    const host = CITY.propGroup || CITY.group;
+    if (!CITY.group || CITY.rec !== recStamp || body.parent !== host) { clear(); return; }
+    if (CITY.propGroup && !CITY.propGroup.visible) return;   // v2.97: hidden from a high camera — nothing to see, so no per-frame work
 
     const player = ACTORS.player;
     const pv = player && player.group ? player.group.position : null;
@@ -278,7 +280,7 @@ export const TRAFFIC = (() => {
 
   // ---- teardown -----------------------------------------------------
   function clear() {
-    if (body) { try { CITY.group && CITY.group.remove(body, cab, wheels); } catch (e) { } }
+    if (body) { try { if (body.parent) body.parent.remove(body, cab, wheels); } catch (e) { } }   // v2.97: the cars may sit in the prop group
     for (const m of [body, cab, wheels]) {
       if (!m) continue;
       try { m.geometry && m.geometry.dispose(); m.material && m.material.dispose(); m.dispose(); } catch (e) { }
