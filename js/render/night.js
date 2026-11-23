@@ -341,9 +341,12 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.99 — TIDY STREETS', `
-    <p><b>Streets read a little less cluttered.</b></p>
-    <div class="kv"><span class="k">SIDEWALKS</span><span class="v">newspaper boxes and planters now stand only beside lamps that are actually drawn, instead of being scattered along lamp-less streets — about nine in ten fewer</span></div>
+  openModal('Welcome to v2.100 — SAVE FILE', `
+    <p><b>Carry your game anywhere.</b></p>
+    <div class="kv"><span class="k">EXPORT</span><span class="v">Help window or start screen: download your world as a file on your device</span></div>
+    <div class="kv"><span class="k">IMPORT</span><span class="v">load a file back — checked first, shows what it replaces, one-step undo</span></div>
+    <div class="kv"><span class="k">WHY</span><span class="v">saves live per site address; a new address starts empty until you import</span></div>
+    <div class="kv"><span class="k">LOANS</span><span class="v">warnings now say how many days overdue and how many remain</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }
