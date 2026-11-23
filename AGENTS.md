@@ -16,7 +16,7 @@ Shared rules for every agent and human on Open World. Read this first, every ses
 - License: PolyForm Noncommercial 1.0.0 (`LICENSE`). Play money only: no real-money features, ever.
 
 ## Branches and releases
-- `TopTierDevelopment-Thiessen` is Kayne's dev branch and what GitHub Pages serves.
+- `TopTierDevelopment-Thiessen` is Kayne's dev branch. GitHub Pages serves `main` (`.github/workflows/deploy.yml` deploys on every push to `main`), so what Pages shows always matches `main`.
 - `main` is what may go to Gamble Limited's production server, which pulls `main`. Kayne may merge to `main` himself, no review needed. Do not put broken code on `main`.
 - Anyone else works on a branch and opens a PR. `git fetch` before starting: pushes can arrive at any time.
 - When the game changes, bump the version everywhere it appears (`js/config.js` `GAME_VERSION`, `js/render/night.js` What's-New card + `js/boot.js` ready log, `openworld.html` title/footer, `index.html` `?v=` and news blurb, `version.json`) and add a line to `CHANGES.md`. The `index.html` release summary (`<div class="news">`) and the boot-screen fine print (`#veil .at` in `openworld.html`) are each capped at **200 words**, CI-enforced: the new version gets a short paragraph/line, older releases compress to one line each, and the full log lives in `CHANGES.md` — when a new version ships, fold the previous lead paragraph into the one-line list. The `.at` line always keeps the map attribution ("Map data © OpenStreetMap contributors (ODbL)"). Leave `game.html` untouched (baseline).
