@@ -180,7 +180,7 @@ export const LOAN = (() => {
         if (lo.missedSince == null) {
           lo.missedSince = d; lo.stage = 1; lo.feeAt = d + GRACE; lo.dropAt = d + 10; L().hist.late++;
           note('Missed the ' + fmt$(short) + ' minimum on ' + lo.id);
-          toast('⚠ <b>Payment missed on loan ' + lo.id + '</b> — ' + fmt$(lo.overdue) + ' overdue. You have a <b>grace period of ' + GRACE + ' days</b>: pay it and nothing else happens. After that: a late fee, then a credit score drop, then your bank balance and some properties are seized.', 'warn');
+          toast('⚠ <b>Payment missed on loan ' + lo.id + '</b> — ' + fmt$(lo.overdue) + ' overdue. You have a <b>grace period of ' + GRACE + ' days</b>: pay it and nothing else happens. Counting days overdue from the missed due day: a late fee at ' + GRACE + ', a credit score drop at 10, your bank balance seized at ' + SEIZE_BANK + ' and some properties at ' + SEIZE_PROP + ' days overdue.', 'warn');
         } else toast('⚠ <b>Another minimum missed on loan ' + lo.id + '</b> — ' + fmt$(lo.overdue) + ' now overdue.', 'warn');
       }
     }
@@ -198,7 +198,7 @@ export const LOAN = (() => {
     if (d >= lo.dropAt) {                                                      // CREDIT DROP (day 10, then every 10)
       lo.stage = Math.max(lo.stage, 4); const first = lo.dropAt === lo.missedSince + 10; lo.dropAt = d + 10;
       setScore(first ? -DROP1 : -DROP_N, 'loan ' + lo.id + ' is ' + late + ' days overdue');
-      toast('📉 <b>Credit score drops to ' + score() + '</b> — loan ' + lo.id + ' is ' + late + ' days overdue. At ' + SEIZE_BANK + ' days the overdue amount is seized from your bank accounts.', 'warn');
+      toast('📉 <b>Credit score drops to ' + score() + '</b> — loan ' + lo.id + ' is ' + late + ' days overdue. At ' + SEIZE_BANK + ' days overdue (in ' + Math.max(0, SEIZE_BANK - late) + ' days) the overdue amount is seized from your bank accounts.', 'warn');
     }
     if (late === SEIZE_BANK - 3) warnOnce(lo, 'sb', '🚨 <b>Bank seizure in 3 days</b> — the lender will take ' + fmt$(lo.overdue) + ' from your bank accounts. Pay loan ' + lo.id + ' now.');
     if (late >= SEIZE_BANK && lo.overdue > 0 && (late - SEIZE_BANK) % X === 0) { lo.stage = Math.max(lo.stage, 5); seizeBank(lo); }
@@ -242,12 +242,12 @@ export const LOAN = (() => {
       const left = lo.nextDue - d;
       return { name: 'CURRENT', cls: 'g', next: 'Next minimum ' + fmt$(Math.max(0, effMin(lo) - lo.paid)) + ' due on day ' + lo.nextDue + (left >= 0 ? ' (in ' + left + ' days)' : '') + '. Miss it and a ' + GRACE + '-day grace period starts.' };
     }
-    const late = d - lo.missedSince, to = (n) => Math.max(0, n - late);
-    if (late < GRACE) return { name: 'GRACE PERIOD', cls: 'y', next: fmt$(lo.overdue) + ' overdue. No penalty if paid within ' + to(GRACE) + ' more days; then a late fee, then a credit score drop.' };
-    if (late < 10) return { name: 'LATE FEE', cls: 'r', next: fmt$(lo.overdue) + ' overdue incl. fees. Credit score drops in ' + to(10) + ' days.' };
-    if (late < SEIZE_BANK) return { name: 'CREDIT DROP', cls: 'r', next: fmt$(lo.overdue) + ' overdue. Your bank balance is seized in ' + to(SEIZE_BANK) + ' days.' };
-    if (late < SEIZE_PROP) return { name: 'BANK SEIZURE', cls: 'r', next: fmt$(lo.overdue) + ' overdue. Properties are seized in ' + to(SEIZE_PROP) + ' days.' };
-    return { name: 'PROPERTY SEIZURE', cls: 'r', next: fmt$(lo.overdue) + ' overdue. Up to two properties are repossessed every ' + X + ' days until it is paid.' };
+    const late = d - lo.missedSince, to = (n) => Math.max(0, n - late), od = fmt$(lo.overdue) + ' overdue (day ' + late + ')';
+    if (late < GRACE) return { name: 'GRACE PERIOD', cls: 'y', next: od + '. No penalty if paid within ' + to(GRACE) + ' more days; then a late fee, then a credit score drop.' };
+    if (late < 10) return { name: 'LATE FEE', cls: 'r', next: od + ', incl. fees. Credit score drops at 10 days overdue (in ' + to(10) + ' days).' };
+    if (late < SEIZE_BANK) return { name: 'CREDIT DROP', cls: 'r', next: od + '. Your bank balance is seized at ' + SEIZE_BANK + ' days overdue (in ' + to(SEIZE_BANK) + ' days).' };
+    if (late < SEIZE_PROP) return { name: 'BANK SEIZURE', cls: 'r', next: od + '. Properties are seized at ' + SEIZE_PROP + ' days overdue (in ' + to(SEIZE_PROP) + ' days).' };
+    return { name: 'PROPERTY SEIZURE', cls: 'r', next: od + '. Up to two properties are repossessed every ' + X + ' days until it is paid.' };
   }
 
   // ---- the dashboard (a tab in the BANK panel) --------------------------------------------------
