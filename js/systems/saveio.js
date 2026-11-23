@@ -204,8 +204,9 @@ export const SAVEIO = (() => {
     if (m) setTimeout(() => { try { toast('💾 <b>' + esc(m) + '</b>'); } catch (e) { } }, 1500);
   }
   try {
-    const hb = document.getElementById('b-help');
-    if (hb) hb.addEventListener('click', () => { try { helpInto(); } catch (e) { console.error('[saveio]', e); } });   // runs after the game's own handler has opened Help
+    document.addEventListener('click', e => {                 // delegated, so it survives the bottom bar being rebuilt; after the tick the game's own handler has opened Help
+      if (e.target && e.target.closest && e.target.closest('#b-help')) setTimeout(() => { try { helpInto(); } catch (er) { console.error('[saveio]', er); } }, 0);
+    });
     bootLinks(); showPending();
   } catch (e) { console.error('[saveio]', e); }
 
