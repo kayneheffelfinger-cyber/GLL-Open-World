@@ -341,10 +341,9 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.97 — LIGHT LOAD', `
-    <p><b>Smoother from high up.</b></p>
-    <div class="kv"><span class="k">FROM ALTITUDE</span><span class="v">street furniture, cars, rooftop units, shoreline detail and small trees now hide when the camera is high, where they are a pixel across anyway</span></div>
-    <div class="kv"><span class="k">CLOSE UP</span><span class="v">nothing changes: they come back as you zoom in</span></div>
+  openModal('Welcome to v2.98 — FEWER CALLS', `
+    <p><b>The same city, drawn with less work.</b></p>
+    <div class="kv"><span class="k">PROPS</span><span class="v">street furniture, parked cars and rooftop units are now merged into a handful of meshes when a city builds, so the graphics card has far fewer draw calls — and nothing looks different</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }

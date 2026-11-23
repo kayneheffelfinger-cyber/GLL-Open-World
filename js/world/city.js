@@ -1491,6 +1491,62 @@ export const CITY = (() => {
   }
 
   // ---------- street furniture + parked cars ------------------------
+  // ---------- v2.98 PROP BAKE ----------------------------------------------
+  // Every static prop type (lamps, hydrants, bins, benches, newspaper boxes, planters, rooftop units,
+  // manholes, bollards, shoreline, parked cars) was its own InstancedMesh: ~30 draw calls at mid zoom.
+  // Their parts need independent colors (a lamp pole tinted per instance, its head fixed and emissive),
+  // so they cannot share one instanced geometry. Instead each instance is baked ONCE, at build time,
+  // into a few merged meshes: vertices pre-transformed by the instance matrix, color = material color x
+  // instance color stored as vertex color, bucketed by emissive color + shadow flags. Same triangles,
+  // same colors, same positions; ~5 draw calls instead of ~30. Moving traffic is added later by
+  // systems/traffic.js (dynamic, frustumCulled=false) and is never touched here.
+  function bakeProps() {
+    if (!propGroup) return;
+    const t0 = performance.now(), kids = propGroup.children.slice(), buckets = new Map();
+    const m = new THREE.Matrix4(), nm = new THREE.Matrix3(), v = new THREE.Vector3(), nv = new THREE.Vector3();
+    let bakedMeshes = 0, verts = 0;
+    for (const o of kids) {
+      const mat = o.material;
+      if (!o.isInstancedMesh || o.frustumCulled === false || !mat || Array.isArray(mat) || mat.map || mat.transparent || mat.side !== THREE.FrontSide || mat.type !== 'MeshLambertMaterial') continue;
+      const g = o.geometry, P = g.attributes.position, N = g.attributes.normal, IX = g.index;
+      if (!P || !N) continue;
+      const key = mat.emissive.getHex() + '|' + (o.castShadow ? 1 : 0) + '|' + (o.receiveShadow ? 1 : 0);
+      let b = buckets.get(key);
+      if (!b) buckets.set(key, b = { pos: [], nor: [], col: [], idx: [], n: 0, emissive: mat.emissive.clone(), cast: o.castShadow, recv: o.receiveShadow });
+      const ox = o.position.x - AX, oy = o.position.y, oz = o.position.z - AZ;   // 0,0,0 for every prop mesh; honored anyway
+      const hasIC = !!o.instanceColor, ic = hasIC ? o.instanceColor.array : null, bStart = b.n;
+      for (let i = 0; i < o.count; i++) {
+        o.getMatrixAt(i, m);
+        if (Math.abs(m.determinant()) < 1e-8) continue;                 // a zero-scaled instance (e.g. a backless bench's back) draws nothing
+        nm.getNormalMatrix(m);
+        const cr = mat.color.r * (hasIC ? ic[i * 3] : 1), cg = mat.color.g * (hasIC ? ic[i * 3 + 1] : 1), cb = mat.color.b * (hasIC ? ic[i * 3 + 2] : 1);
+        const base = b.n;
+        for (let k = 0; k < P.count; k++) {
+          v.fromBufferAttribute(P, k).applyMatrix4(m);
+          nv.fromBufferAttribute(N, k).applyMatrix3(nm).normalize();
+          b.pos.push(v.x + ox, v.y + oy, v.z + oz); b.nor.push(nv.x, nv.y, nv.z); b.col.push(cr, cg, cb);
+        }
+        if (IX) for (let k = 0; k < IX.count; k++) b.idx.push(base + IX.getX(k)); else for (let k = 0; k < P.count; k++) b.idx.push(base + k);
+        b.n += P.count;
+      }
+      verts += b.n - bStart; bakedMeshes++;
+      propGroup.remove(o); try { o.geometry.dispose(); mat.dispose(); o.dispose(); } catch (e) { }
+    }
+    for (const b of buckets.values()) {
+      if (!b.n) continue;
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(b.pos, 3));
+      g.setAttribute('normal', new THREE.Float32BufferAttribute(b.nor, 3));
+      g.setAttribute('color', new THREE.Float32BufferAttribute(b.col, 3));
+      g.setIndex(new THREE.Uint32BufferAttribute(b.idx, 1));
+      const mesh = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, emissive: b.emissive }));
+      mesh.position.set(AX, 0, AZ); mesh.castShadow = b.cast; mesh.receiveShadow = b.recv;
+      propGroup.add(mesh);
+    }
+    propBake = { meshes: bakedMeshes, buckets: buckets.size, verts, ms: Math.round(performance.now() - t0) };
+  }
+  let propBake = null;
+
   // ---------- v2.93 SHORELINE DETAIL: reeds, rocks and a few piers ----------
   // Shore points come from two places: the land mask (a coarse grid scan around the anchor, each
   // land/water edge refined by bisection) and the edges of any imported OSM water polygon. On those
@@ -3591,7 +3647,8 @@ export const CITY = (() => {
       buildGreensWater(shifted);  // pond only out here
       onStatus && onStatus('Growing the pastures…'); await _tick();
       buildProps(shifted);
-      try { buildShore(shifted); } catch (e) { console.error('[shore]', e); }   // v2.93
+      try { buildShore(shifted); } catch (e) { console.error('[shore]', e); }
+    try { bakeProps(); } catch (e) { console.error('[bake]', e); }   // v2.98   // v2.93
       buildPastureExtras(shifted);
       buildHills();
       return group;
@@ -3661,7 +3718,8 @@ export const CITY = (() => {
     buildGreensWater(shifted);
     onStatus && onStatus('Parking cars & street furniture…'); await _tick();
     buildProps(shifted);
-    try { buildShore(shifted); } catch (e) { console.error('[shore]', e); }   // v2.93 SHORELINE DETAIL
+    try { buildShore(shifted); } catch (e) { console.error('[shore]', e); }
+    try { bakeProps(); } catch (e) { console.error('[bake]', e); }   // v2.98   // v2.93 SHORELINE DETAIL
     // v2.16 CLEAN HORIZON: no fake backdrop skyline — beyond the city's
     // ground plane the real one world (country, roads, distant cities)
     // takes over, exactly as the player asked.
@@ -3684,7 +3742,7 @@ export const CITY = (() => {
     gates = [];   // v2.14
     suburbRec = null; suburbGroup = null;   // v2.42
     shoreRec = null;                        // v2.93
-    propGroup = null; treeGroup = null;     // v2.97
+    propGroup = null; treeGroup = null; propBake = null;     // v2.97
     cityRec = null; cityAnchor = null;   // v2.15: no stale city state after dispose
   }
   let _winMat = null;
@@ -3752,6 +3810,7 @@ export const CITY = (() => {
     get anchor() { return cityAnchor; },
     get buildingPolys() { return buildingPolys; },   // v2.21: world-space, water-filtered — the dense-core spawn reads this
     get propGroup() { return propGroup; }, get treeGroup() { return treeGroup; },   // v2.97: the LOD groups (systems/proplod.js)
+    get propBake() { return propBake; },             // v2.98: {meshes, buckets, verts} of the last bake
     get shore() { return shoreRec; },                // v2.93: the shoreline census (pts/reeds/rocks/piers)
     get suburb() { return suburbRec; },              // v2.42: the neighborhood census (houses/verts/trees…)
     get suburbGroup() { return suburbGroup; },       // v2.42: distance-LOD host
