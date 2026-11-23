@@ -341,11 +341,10 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.95 — SKY', `
-    <p><b>Tilt the view and look up.</b></p>
-    <div class="kv"><span class="k">CLOUDS</span><span class="v">soft, flat-bottomed clouds drift slowly across the sky</span></div>
-    <div class="kv"><span class="k">SUN</span><span class="v">a warm glow where the sun is, in line with the shadows</span></div>
-    <div class="kv"><span class="k">HORIZON</span><span class="v">unchanged: the sea still meets the sky in one clean line</span></div>
+  openModal('Welcome to v2.96 — TUNE-UP', `
+    <p><b>A cleanup after the look-and-variety releases.</b></p>
+    <div class="kv"><span class="k">CARS</span><span class="v">moving cars now draw all four wheels (two were missing since v2.68)</span></div>
+    <div class="kv"><span class="k">UNDER THE HOOD</span><span class="v">one shared vehicle-shape builder, and the sky frees its textures when the world is rebuilt</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }

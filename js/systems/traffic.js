@@ -26,7 +26,7 @@
 // QA surface: window.TRAFFIC (count / car(i) / state()).
 // ====================================================================
 import * as THREE from 'three';
-import { _mulberry, hashStr, VEH, VEH_PAL, VEH_VAN, VEH_BUS, pickVeh, vehLen } from '../util.js';
+import { _mulberry, hashStr, VEH, VEH_PAL, VEH_VAN, VEH_BUS, pickVeh, vehLen, vehMatrices } from '../util.js';
 import { STATE } from '../state.js';
 import { CITY } from '../world/city.js';
 import { ACTORS } from '../world/actors.js';
@@ -48,10 +48,7 @@ export const TRAFFIC = (() => {
   const ROT = new THREE.Matrix4(), MAT = new THREE.Matrix4();
   const TMP = new THREE.Matrix4();
   // v2.92: per-kind local matrices (body scale, cab offset+scale, four wheels) — built once
-  const BODY_M = VEH.map(v => new THREE.Matrix4().makeScale(v.bs[0], v.bs[1], v.bs[2]));
-  const CAB_M = VEH.map(v => new THREE.Matrix4().makeTranslation(v.ct[0], v.ct[1], v.ct[2]).multiply(new THREE.Matrix4().makeScale(v.cs[0], v.cs[1], v.cs[2])));
-  const WHEEL_M = VEH.map(v => [v.wx, -v.wx, v.wx, -v.wx].map((x, k) =>
-    new THREE.Matrix4().makeTranslation(x, .3 * v.wr, k % 2 ? v.wz : -v.wz).multiply(new THREE.Matrix4().makeScale(v.wr, v.wr, v.wr))));
+  const VM = vehMatrices(), BODY_M = VM.body, CAB_M = VM.cab, WHEEL_M = VM.wheel;
 
   function drivable() {
     return (CITY.roads || []).filter(r => !r.ped && r.pts && r.pts.length > 1);

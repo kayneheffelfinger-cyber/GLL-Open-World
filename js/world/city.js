@@ -4,7 +4,7 @@
 // ====================================================================
 import * as THREE from 'three';
 import { ECON } from '../config.js';
-import { _ihash, _mulberry, _polyArea, hashStr, cityDNA, VEH, VEH_PAL, VEH_VAN, pickVeh } from '../util.js';
+import { _ihash, _mulberry, _polyArea, hashStr, cityDNA, VEH_PAL, VEH_VAN, pickVeh, vehMatrices } from '../util.js';
 import { suburbRoads, coreR } from '../suburbs.js';   // v2.73
 import { LANDGEO } from '../core.js';
 import { WORLD } from '../world/world.js';
@@ -1859,10 +1859,7 @@ export const CITY = (() => {
       const mat4 = new THREE.Matrix4(), rot = new THREE.Matrix4(), loc = new THREE.Matrix4(), tmp = new THREE.Matrix4();
       const c = new THREE.Color();
       // v2.92 VEHICLE VARIETY: per-kind local matrices, built once (the sedan is the identity = the old car)
-      const BODY_M = VEH.map(v => new THREE.Matrix4().makeScale(v.bs[0], v.bs[1], v.bs[2]));
-      const CAB_M = VEH.map(v => new THREE.Matrix4().makeTranslation(v.ct[0], v.ct[1], v.ct[2]).multiply(new THREE.Matrix4().makeScale(v.cs[0], v.cs[1], v.cs[2])));
-      const WHEEL_M = VEH.map(v => [v.wx, v.wx, -v.wx, -v.wx].map((x, w) =>
-        new THREE.Matrix4().makeTranslation(x, .3 * v.wr, w % 2 ? v.wz : -v.wz).multiply(new THREE.Matrix4().makeScale(v.wr, v.wr, v.wr))));
+      const VM = vehMatrices(), BODY_M = VM.body, CAB_M = VM.cab, WHEEL_M = VM.wheel;
       for (let i = 0; i < n; i++) {
         const [x, z, th, taxi] = spots[i];
         rot.makeRotationY(th);

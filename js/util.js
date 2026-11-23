@@ -45,6 +45,15 @@ export function pickVeh(r, allowBus) {
   return allowBus ? 5 : 4;
 }
 export const vehLen = k => 4.05 * VEH[k].bs[0];
+// local matrices per kind (body scale, cab offset+scale, four wheels), built once by the caller
+export function vehMatrices() {
+  const S = (x, y, z) => new THREE.Matrix4().makeScale(x, y, z), T = (x, y, z) => new THREE.Matrix4().makeTranslation(x, y, z);
+  return {
+    body: VEH.map(v => S(v.bs[0], v.bs[1], v.bs[2])),
+    cab: VEH.map(v => T(v.ct[0], v.ct[1], v.ct[2]).multiply(S(v.cs[0], v.cs[1], v.cs[2]))),
+    wheel: VEH.map(v => [[v.wx, -v.wz], [v.wx, v.wz], [-v.wx, -v.wz], [-v.wx, v.wz]].map(([x, z]) => T(x, .3 * v.wr, z).multiply(S(v.wr, v.wr, v.wr))))
+  };
+}
 // great-circle distance in km + initial bearing in degrees (from north)
 export function gcKmLL(lat1, lon1, lat2, lon2) {
   const r = Math.PI / 180;

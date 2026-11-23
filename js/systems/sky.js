@@ -94,7 +94,10 @@ export const SKY = (() => {
     try {
       if (!built) build();
       if (!cloudDome) return;
-      if (!cloudDome.parent || !skyDome || cloudDome.parent !== skyDome.parent) { cloudDome = null; built = false; return; }   // the world scene was rebuilt
+      if (!cloudDome.parent || !skyDome || cloudDome.parent !== skyDome.parent) {   // the world scene was rebuilt: free the old cloud band
+        try { cloudDome.geometry.dispose(); cloudDome.material.map && cloudDome.material.map.dispose(); cloudDome.material.dispose(); } catch (e) { }
+        cloudDome = null; built = false; return;
+      }
       cloudDome.position.copy(camera.position);
       cloudDome.rotation.y += (dt || 0.016) * .0025;         // one lap in ~42 minutes
     } catch (e) { console.error('[sky]', e); }
