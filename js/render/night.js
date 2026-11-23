@@ -341,9 +341,9 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.98 — FEWER CALLS', `
-    <p><b>The same city, drawn with less work.</b></p>
-    <div class="kv"><span class="k">PROPS</span><span class="v">street furniture, parked cars and rooftop units are now merged into a handful of meshes when a city builds, so the graphics card has far fewer draw calls — and nothing looks different</span></div>
+  openModal('Welcome to v2.99 — TIDY STREETS', `
+    <p><b>Streets read a little less cluttered.</b></p>
+    <div class="kv"><span class="k">SIDEWALKS</span><span class="v">newspaper boxes and planters now stand only beside lamps that are actually drawn, instead of being scattered along lamp-less streets — about nine in ten fewer</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }

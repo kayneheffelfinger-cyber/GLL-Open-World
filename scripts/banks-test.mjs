@@ -98,8 +98,9 @@ s = await E(() => BANK.snap()); assert.equal(s.cc[0].owed, 0);
 ok('a card paid off is settled');
 
 // ---- net worth + the Money List
-const w0 = await E(() => RIVALS.playerWorth());
-await E(() => BANK.deposit('a_london', 10000)); const w1 = await E(() => RIVALS.playerWorth());
+// read, deposit and re-read inside ONE synchronous page call: with separate round trips the live game loop (market ticks, income)
+// can move playerWorth() between the two reads and fail the 1e-6 check at random
+const [w0, w1] = await E(() => { const a = RIVALS.playerWorth(); BANK.deposit('a_london', 10000); return [a, RIVALS.playerWorth()]; });
 assert.ok(Math.abs(w1 - w0) < 1e-6, 'cash into an account does not change net worth');
 await E(() => { BANK.setMethod('credit:a_newyork'); }); await E(async () => { const { spend } = await import('/js/systems/economy.js'); spend(1000, 'x'); });
 const n1 = await E(() => BANK.net()), w2 = await E(() => RIVALS.playerWorth());

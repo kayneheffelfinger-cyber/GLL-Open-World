@@ -1545,7 +1545,7 @@ export const CITY = (() => {
     }
     propBake = { meshes: bakedMeshes, buckets: buckets.size, verts, ms: Math.round(performance.now() - t0) };
   }
-  let propBake = null;
+  let propBake = null, furnRec = null;
 
   // ---------- v2.93 SHORELINE DETAIL: reeds, rocks and a few piers ----------
   // Shore points come from two places: the land mask (a coarse grid scan around the anchor, each
@@ -1804,11 +1804,13 @@ export const CITY = (() => {
       }
       // v2.91: newspaper boxes and planters, beside some lamps (re-checked against buildings, plots and asphalt)
       const nb = [], pl = [];
-      for (let i = 1; i < lamps.length; i += 3) {
+      const drawnLamps = Math.min(lamps.length, Math.floor(460 * mobF));   // v2.99: only beside lamps that are actually drawn (the lamp block above caps at 460)
+      for (let i = 1; i < drawnLamps; i += 3) {
         const [x, z, th] = lamps[i], px = x + Math.sin(th) * 1.7, pz = z + Math.cos(th) * 1.7;   // 1.7 m along the walk
         if (pointInBuilding(px, pz) || plotAt(px, pz) || !offAsphalt(px, pz, 1.2)) continue;
         (hashStr('np' + Math.round(px) + ',' + Math.round(pz)) % 100 < 55 ? nb : pl).push([px, pz, th]);
       }
+      furnRec = { lamps: lamps.length, drawnLamps, news: nb.length, planters: pl.length };   // v2.99: QA census (CITY.furn)
       if (nb.length) {
         const NBC = [0x2a5a9a, 0xb03a2e, 0xd2a52a, 0x2f6b4a];
         const box = new THREE.InstancedMesh(new THREE.BoxGeometry(.5, .95, .42), new THREE.MeshLambertMaterial({ color: 0xffffff }), nb.length);
@@ -3742,7 +3744,7 @@ export const CITY = (() => {
     gates = [];   // v2.14
     suburbRec = null; suburbGroup = null;   // v2.42
     shoreRec = null;                        // v2.93
-    propGroup = null; treeGroup = null; propBake = null;     // v2.97
+    propGroup = null; treeGroup = null; propBake = null; furnRec = null;     // v2.97
     cityRec = null; cityAnchor = null;   // v2.15: no stale city state after dispose
   }
   let _winMat = null;
@@ -3810,6 +3812,7 @@ export const CITY = (() => {
     get anchor() { return cityAnchor; },
     get buildingPolys() { return buildingPolys; },   // v2.21: world-space, water-filtered — the dense-core spawn reads this
     get propGroup() { return propGroup; }, get treeGroup() { return treeGroup; },   // v2.97: the LOD groups (systems/proplod.js)
+    get furn() { return furnRec; },                  // v2.99: {lamps, drawnLamps, news, planters}
     get propBake() { return propBake; },             // v2.98: {meshes, buckets, verts} of the last bake
     get shore() { return shoreRec; },                // v2.93: the shoreline census (pts/reeds/rocks/piers)
     get suburb() { return suburbRec; },              // v2.42: the neighborhood census (houses/verts/trees…)
