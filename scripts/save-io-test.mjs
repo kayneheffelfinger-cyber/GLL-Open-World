@@ -57,7 +57,7 @@ assert.match(modalTxt, /replaces your current game/i); assert.match(modalTxt, /\
 await Promise.all([g.page.waitForNavigation({ waitUntil: 'load' }), g.page.click('#sio-go')]); await reloaded(g);
 assert.equal(await E(() => STATE.money), 12345); assert.equal(await E(() => STATE.plots.length), 1); assert.equal(await E(() => STATE.plots[0].crew[0].stars), 4);
 assert.equal(strip(await raw(g)), strip(exported), 'the stored save equals the exported pack (only ts is fresh)');
-assert.match(await toasts(g).then(t => t || ''), /Save imported|imported/i);
+await g.page.waitForFunction(() => /imported/i.test(document.getElementById('toasts').innerText), null, { timeout: 8000 });   // the toast arrives 1.5 s after the reload
 // export again from the boot screen link and compare: round-trip equality
 const [dl2] = await Promise.all([g.page.waitForEvent('download'), g.page.click('#bt-exp')]); const file2 = join(tmp, 'save2.json'); await dl2.saveAs(file2);
 assert.equal(strip(readFileSync(file2, 'utf8')), strip(exported));

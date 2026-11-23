@@ -796,3 +796,8 @@ table.menu td.m{font-family:var(--mono);color:var(--green)}
 .toast.warn{border-left:3px solid var(--gold)}.toast.err{border-left:3px solid #FC8181}
 .ln-steps .s{font-size:7px;letter-spacing:.3px}
 .toast{max-width:min(520px,88vw);text-align:left}
+
+/* ================= SAVE FILE (v2.99) ================= */
+#boot #bt-sio{margin-top:10px;font-size:10px;letter-spacing:1.6px;color:#4B5563;text-transform:uppercase}
+#boot #bt-sio a{color:#6B7280;text-decoration:none;margin:0 7px}
+#boot #bt-sio a:hover{color:var(--mut)}

@@ -192,10 +192,11 @@ export const SAVEIO = (() => {
     wireRow(body);
   }
   function bootLinks() {
+    // a sibling of the footer, not inside it: night.js wires every `#boot .foot a` to the PRIVACY/TERMS/SUPPORT modals
     const foot = document.querySelector('#boot .foot'); if (!foot || document.getElementById('bt-sio')) return;
-    const s = document.createElement('span'); s.id = 'bt-sio';
-    s.innerHTML = '·<a href="#" id="bt-exp">EXPORT SAVE</a>·<a href="#" id="bt-imp">IMPORT SAVE</a>';
-    foot.appendChild(s);
+    const s = document.createElement('div'); s.id = 'bt-sio';
+    s.innerHTML = '<a href="#" id="bt-exp">EXPORT SAVE</a>·<a href="#" id="bt-imp">IMPORT SAVE</a>';
+    foot.insertAdjacentElement('afterend', s);
     s.querySelector('#bt-exp').onclick = e => { e.preventDefault(); exportSave(); };
     s.querySelector('#bt-imp').onclick = e => { e.preventDefault(); pickFile(); };
   }
