@@ -302,6 +302,7 @@ export const GUIDE = (() => {
   }
   function suggestions() {
     if (STATE.mode === 'boot' || starterActive() || (G().cur && chipMode === 'step')) return;
+    if (!STATE.tut || !STATE.tut.done) return;      // the starter guide goes first: nothing is suggested until it is finished or skipped
     const g = G();
     // 1) the starter guide has finished (or was always done on this save): offer the first chapter that is open to the player
     if (!g.sug.starter) {
