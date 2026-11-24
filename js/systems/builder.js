@@ -54,6 +54,8 @@ export const BLD = (() => {
   const MARGIN = .2;                   // stay this far inside the stakes
   const CART_W = 2.2, CART_D = 3.2;   // the cart keeps its space mid-plot
   const MAT_KEYS = ['Wood', 'Stone', 'Steel', 'Glass'];
+  const SCRAP = .6;                    // v2.101 HELP BOOK: demolish refunds this share of the materials
+  const STUDIO = { W: [6, 14], D: [6, 12], FLOORS: [1, 12], MAX_DESIGNS: 12 };   // the Architect's sliders (width/depth step 2 m)
   const YARD = { Wood: 30, Stone: 22, Steel: 78, Glass: 52 };   // $/t — steel & glass run above par (58/38): refine your own and pull
   const TYPES = [
     { id: 'house', name: 'House',           icon: '🏠', w: 6,  d: 6,  h: 4.6, days: .5, inc: 30,  val: 1250, mat: { Wood: 30, Stone: 18 } },
@@ -132,7 +134,7 @@ export const BLD = (() => {
       STATE.mat[k] = Math.max(0, +((shed(k)) - need).toFixed(1));
     }
   }
-  function refundOf(T) { const o = {}; for (const k in T.mat) o[k] = Math.round(T.mat[k] * .6 * 10) / 10; return o; }   // the 60% scrap rate, same as the Works (rounded to 0.1 t — floor bit the last gram via float error)
+  function refundOf(T) { const o = {}; for (const k in T.mat) o[k] = Math.round(T.mat[k] * SCRAP * 10) / 10; return o; }   // the 60% scrap rate, same as the Works (rounded to 0.1 t — floor bit the last gram via float error)
 
   // ---- plot + grid math ----------------------------------------------
   function recOf(p) {   // the plot record in the loaded world (city or rural)
@@ -533,7 +535,7 @@ export const BLD = (() => {
       <div class="kv"><span class="k">DEMOLISH</span><span class="v">Refunds ${rfList} back to your shed (the 60% scrap rate)${mn ? ' · machines sell for 60% too' : ''}</span></div>
       <div style="display:flex;gap:8px;margin-top:16px">
         ${isFact ? '<button class="btn good" id="bd-mach" style="flex:1">MACHINES' + (mn ? ' · ' + mn : '') + '</button>' : ''}
-        <button class="btn" id="bd-dem" style="flex:1;color:#ff5470">DEMOLISH — REFUND 60%</button>
+        <button class="btn" id="bd-dem" style="flex:1;color:#ff5470">DEMOLISH — REFUND ${Math.round(SCRAP * 100)}%</button>
         <button class="btn" id="bd-x">CLOSE</button>
       </div>`);
     document.getElementById('bd-x').onclick = closeModal;
@@ -651,9 +653,9 @@ export const BLD = (() => {
       const styleChips = STYLES.map(s => `<button class="tpbtn" data-sy="${s.id}" style="${S.style === s.id ? 'font-weight:700;background:rgba(245,204,116,.25)' : ''}">${s.icon} ${s.name}</button>`).join(' ');
       openModal('The Architect — Design Your Own', `
         <p>Compose a building only you would think of. Cost, build time and income scale honestly with the size — a twelve-floor landmark is a twelve-floor project.</p>
-        ${step('WIDTH', S.w, 6, 14, 2, 'm', v => v + ' m')}
-        ${step('DEPTH', S.d, 6, 12, 2, 'm', v => v + ' m')}
-        ${step('FLOORS', S.floors, 1, 12, 1, '', v => v)}
+        ${step('WIDTH', S.w, STUDIO.W[0], STUDIO.W[1], 2, 'm', v => v + ' m')}
+        ${step('DEPTH', S.d, STUDIO.D[0], STUDIO.D[1], 2, 'm', v => v + ' m')}
+        ${step('FLOORS', S.floors, STUDIO.FLOORS[0], STUDIO.FLOORS[1], 1, '', v => v)}
         <div class="kv"><span class="k">STYLE</span><span class="v">${styleChips}</span></div>
         <div class="kv"><span class="k">NAME</span><span class="v"><input id="st-name" maxlength="24" placeholder="${(STATE.name || 'Your') + ' ' + (S.floors >= 8 ? 'Tower' : S.floors >= 4 ? 'Block' : 'House')}" value="${S.name.replace(/"/g, '&quot;')}" style="background:rgba(13,17,23,.8);border:1px solid #4A5568;color:#E2E8F0;padding:6px 10px;border-radius:7px;font-size:12px;width:180px"></span></div>
         <div class="kv"><span class="k">THE DRAFT</span><span class="v">${D.w}×${D.d} m · ${D.floors} floors · ${D.h} m tall${D.floors >= 8 ? ' · wedding-cake setback' : ''}</span></div>
@@ -670,9 +672,9 @@ export const BLD = (() => {
       nm.oninput = () => { S.name = nm.value; };
       document.querySelectorAll('[data-st]').forEach(b => b.onclick = () => {
         const k = b.dataset.st, dv = +b.dataset.d;
-        if (k === 'width') S.w = Math.max(6, Math.min(14, S.w + dv * 2));
-        if (k === 'depth') S.d = Math.max(6, Math.min(12, S.d + dv * 2));
-        if (k === 'floors') S.floors = Math.max(1, Math.min(12, S.floors + dv));
+        if (k === 'width') S.w = Math.max(STUDIO.W[0], Math.min(STUDIO.W[1], S.w + dv * 2));
+        if (k === 'depth') S.d = Math.max(STUDIO.D[0], Math.min(STUDIO.D[1], S.d + dv * 2));
+        if (k === 'floors') S.floors = Math.max(STUDIO.FLOORS[0], Math.min(STUDIO.FLOORS[1], S.floors + dv));
         draw();
       });
       document.querySelectorAll('[data-sy]').forEach(b => b.onclick = () => { S.style = b.dataset.sy; draw(); });
@@ -690,7 +692,7 @@ export const BLD = (() => {
       });
       document.getElementById('st-save').onclick = () => {
         if (!(STATE.designs)) STATE.designs = [];
-        if (STATE.designs.length >= 12) { toast('<b>Twelve designs</b> fit on the shelf — remove one first.', 'warn'); return; }
+        if (STATE.designs.length >= STUDIO.MAX_DESIGNS) { toast('<b>' + STUDIO.MAX_DESIGNS + ' designs</b> fit on the shelf — remove one first.', 'warn'); return; }
         STATE.designs.push(designOf(S.w, S.d, S.floors, S.style, S.name));
         try { saveGame(); } catch (er) { }
         toast('📐 <b>' + STATE.designs[STATE.designs.length - 1].name + '</b> drafted — find it in the catalog, PLACE to site it.');
@@ -788,6 +790,7 @@ export const BLD = (() => {
       return { ok: true, refund: rf, machines: machGot };
     },
     arming: () => !!placing, TYPES, YARD, MAX_PER_PLOT,
+    rules: { SCRAP, STUDIO, STYLES, designOf, yardCost: YARD_COST },   // v2.101 HELP BOOK
     // v2.61 FACTORY FLOOR: the factory machine system rides these internals
     liveAt: key => live.get(key) || null,   // the live root/body of a standing building
     recOf, toLocal, toWorld,

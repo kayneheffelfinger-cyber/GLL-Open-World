@@ -390,7 +390,8 @@ export const MARKET = (() => {
     if (p.lasts) for (const k in p.lasts) { const b = ensureBook(k); if (b) b.last = p.lasts[k]; }
   }
 
-  return { start, tick, render, toggleOpen, tickerStats, pack, restore, setBalanceRef,
+  return { start, tick, render, toggleOpen, tickerStats, pack, restore, setBalanceRef, rules: { FEE },   // v2.101 HELP BOOK
+
     get active() { return active; } };
 })();
 

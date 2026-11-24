@@ -89,6 +89,7 @@ export const FURN = (() => {
   const INSET = .3;                 // furniture sits nearer the walls than machines (a bed hugs them)
   const GAP = .12;                  // air between a piece and any other piece or machine
   const CAP_MAX = 24;               // per-unit piece ceiling
+  const CAP_MIN = 4, AREA_PER = 2.5; // one piece per this many m² of your space, never fewer than CAP_MIN (v2.101 HELP BOOK: named)
   const SLAB0 = .21, FH = 3.2;      // the interior builder's own constants
   let placing = null;               // { o, b, rects, fl, yF, t, r, cap, how }
   let moving = null;                // { o, b, rects, fl, yF, t, r, i, x0, z0, mesh }
@@ -121,7 +122,7 @@ export const FURN = (() => {
   const billStr = T => Object.entries(T.mat).map(([k, n]) => n + ' t ' + k.toLowerCase()).join(' + ');
 
   // ---- bookkeeping -----------------------------------------------------
-  const capOf = area => Math.min(CAP_MAX, Math.max(4, Math.floor((area || 10) / 2.5)));
+  const capOf = area => Math.min(CAP_MAX, Math.max(CAP_MIN, Math.floor((area || 10) / AREA_PER)));
   const yOf = fl => SLAB0 + fl * FH;
   const eff = (T, r) => ((r | 0) % 2) ? { w: T.d, d: T.w } : { w: T.w, d: T.d };
   const valueOfUnit = o => (o.furn || []).reduce((s, f) => s + (TYPES[f.t] ? TYPES[f.t].price : 0), 0);
@@ -755,6 +756,7 @@ export const FURN = (() => {
 
   return {
     tick, click, openShop, openShopFor, exitMode, TYPES, capOf,
+    rules: { CAP_MAX, CAP_MIN, AREA_PER, SELL_BACK },   // v2.101 HELP BOOK
     valueOfRooms, valueOfUnit, rotateAt, removeAt,
     // QA: programmatic placement (no modal, no ghost) — same validation, same commit
     place(bkey, kind, index, t, x, z, r, how) {

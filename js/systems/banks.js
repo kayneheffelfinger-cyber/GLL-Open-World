@@ -44,6 +44,7 @@ export const BANK = (() => {
   const DAY = 90, MONTH = 30, DUE_GAP = 10;
   const XFER_FEE = 1.5, INT_M = .003, CC_INT_M = .02, LATE_FEE = 25, MIN_PCT = .05, MIN_FLOOR = 25;
   const LEDGER_MAX = 300, STMT_MAX = 48;
+  const LIM_BASE = 1500, LIM_BAL = .2, LIM_MIN = 500, LIM_MAX = 25000;   // v2.101 HELP BOOK: the credit-limit formula, named
   const r2 = v => Math.round((+v || 0) * 100) / 100;
   const byKey = {}; for (const c of CITIES) byKey[c.key] = c;
   const bankName = k => ((byKey[k] || {}).name || k) + ' Savings & Trust';
@@ -157,7 +158,7 @@ export const BANK = (() => {
   }); } catch (e) { }
 
   // ---- cards -------------------------------------------------------------------------
-  const limitFor = id => { const a = acct(id); if (!a) return 0; return Math.max(500, Math.min(25000, Math.round((1500 + .2 * Math.max(0, a.bal)) * scoreFactor() / 100) * 100)); };
+  const limitFor = id => { const a = acct(id); if (!a) return 0; return Math.max(LIM_MIN, Math.min(LIM_MAX, Math.round((LIM_BASE + LIM_BAL * Math.max(0, a.bal)) * scoreFactor() / 100) * 100)); };
   function issueDebit(id) { const b = B(); if (!acct(id)) return { ok: false, why: 'no account' }; b.debit[id] = 1; toast('💳 Debit card issued on ' + acct(id).name + '.'); done(); return { ok: true }; }
   function applyCredit(id) {
     const b = B(); if (!acct(id)) return { ok: false, why: 'no account' };
@@ -360,6 +361,7 @@ export const BANK = (() => {
     open, close, deposit, withdraw, transfer, issueDebit, applyCredit, payCard, pay, setMethod, openPanel, empireInto, tick, installButton,
     post, cash, render, accts, acct, day, r2, addSection(s) { sections.push(s); }, onDay(f) { dayListeners.push(f); },
     net, assets, owed, loansOwed, limitFor, bankName, XFER_FEE, MONTH, DAY,
+    rules: { INT_M, CC_INT_M, LATE_FEE, MIN_PCT, MIN_FLOOR, DUE_GAP, LIM_BASE, LIM_BAL, LIM_MIN, LIM_MAX, LEDGER_MAX },   // v2.101 HELP BOOK
     get state() { return B(); },
     // QA: run n whole game days instantly (the same day beat the clock runs)
     qaDays(n) { for (let i = 0; i < (n || 1); i++) { try { nextDay(); } catch (e) { console.error('[banks]', e); } } return this.snap(); },

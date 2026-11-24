@@ -801,3 +801,19 @@ table.menu td.m{font-family:var(--mono);color:var(--green)}
 #boot #bt-sio{margin-top:10px;font-size:10px;letter-spacing:1.6px;color:#4B5563;text-transform:uppercase}
 #boot #bt-sio a{color:#6B7280;text-decoration:none;margin:0 7px}
 #boot #bt-sio a:hover{color:var(--mut)}
+
+/* v2.101 HELP BOOK: the searchable sections inside the Help window */
+#hb-q{width:100%;box-sizing:border-box;margin:0 0 10px;padding:10px 12px;border-radius:var(--r);background:rgba(255,255,255,.06);border:1px solid var(--line,rgba(255,255,255,.12));color:var(--txt);font-size:14px}
+#hb-none{padding:10px 2px;color:var(--dim);font-size:12.5px}
+.hb-sec{margin:0 0 8px;border:1px solid rgba(255,255,255,.1);border-radius:var(--r);background:rgba(255,255,255,.03)}
+.hb-sec>summary{cursor:pointer;padding:11px 12px;font-weight:800;font-size:12.5px;letter-spacing:.6px;color:#fff;list-style-position:inside}
+.hb-sec .hb-c{float:right;color:var(--dim);font-weight:600;font-size:11px}
+.hb-ent{margin:0 8px 6px;border-top:1px solid rgba(255,255,255,.07)}
+.hb-ent>summary{cursor:pointer;padding:9px 4px;font-size:13px;color:var(--txt)}
+.hb-body{padding:0 6px 10px;font-size:12.5px;line-height:1.5}
+.hb-body p{margin:6px 0}.hb-body ol,.hb-body ul{margin:4px 0 8px;padding-left:20px}.hb-body li{margin:3px 0}
+.hb-body .hb-k{font-size:9.5px;letter-spacing:1.6px;color:var(--dim);font-weight:800;margin:10px 0 3px}
+.hb-body .kv{align-items:flex-start;gap:10px}.hb-body .kv .v{text-align:right;font-size:11.5px;word-break:break-word}
+.hb-body small{color:var(--dim)}
+.hb-n{color:var(--green2,#68d391);font-family:var(--mono)}.hb-b{color:#f5cc74}
+.hb-fail{color:#fca5a5}.hb-attr{font-size:11px;color:var(--dim);margin-top:12px}

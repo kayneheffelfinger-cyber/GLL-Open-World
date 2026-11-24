@@ -585,6 +585,7 @@ export const FARM = (() => {
 
   return {
     tick, pick, tip, parcelAt, travelTo, openManage, empireInto, rebuildAt,
+    rules: { CAP, SELL_BACK, SHOP_DIST, SUB_R },   // v2.101 HELP BOOK
     list: () => (STATE.acres || []).slice(),
     count: () => (STATE.acres || []).length,
     buyAt(x, z) { const p = parcelAt(x, z); if (!p) return { ok: false, why: 'no parcel' }; return commit(p); },

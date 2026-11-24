@@ -275,6 +275,7 @@ export const PWR = (() => {
 
   return {
     open, empireInto, tick, nightSettle, pay, payAll, isCut, draw, price, mult, PAR,
+    rules: { STEP, LO, HI, BASE_KW, VEND_KW },   // v2.101 HELP BOOK
     bizRow: bizRowHTML, biz: () => biz().slice(),
     // QA: run whole game-days of drift + billing instantly (same math as the beat)
     qaDay(n) { for (let i = 0; i < (n || 1); i++) { try { day(); } catch (er) { } } return this.state(); },

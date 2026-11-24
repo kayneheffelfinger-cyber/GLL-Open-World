@@ -89,6 +89,7 @@ export const LORD = (() => {
   const isTenanted = id => { const e = entryOf(id); return !!(e && e.tenant); };
 
   // ---- the demand curve: P(a viewing tenant signs) vs price/market --
+  const LEASE_MIN = 4, LEASE_MAX = 12;   // v2.101 HELP BOOK: lease length in game days (named so the book reads them)
   const CURVE = [[.9, .97], [1, .95], [1.25, .85], [1.5, .62], [1.75, .42], [2, .22], [2.25, .10], [2.5, .045], [2.75, .015], [3, 0]];
   function takeProb(ratio) {
     if (ratio <= CURVE[0][0]) return CURVE[0][1];
@@ -155,7 +156,7 @@ export const LORD = (() => {
   function letView(e, a) {   // one prospective tenant looks at a vacant listing
     if (Math.random() < takeProb(e.price / a.fair)) {
       e.tenant = tenantName();
-      e.term = 4 + Math.floor(Math.random() * 9);
+      e.term = LEASE_MIN + Math.floor(Math.random() * (LEASE_MAX - LEASE_MIN + 1));
       try { toast('<b>' + e.tenant + '</b> rented your <b>' + a.name + '</b> — paying $' + e.price + '/day for ' + e.term + ' days.'); } catch (er) { }
       return true;
     }
@@ -316,6 +317,7 @@ export const LORD = (() => {
 
   return {
     open, tick, listFor, unlist, evict, isListed, isTenanted, tagLine,
+    rules: { LEASE_MIN, LEASE_MAX, takeProb },   // v2.101 HELP BOOK
     assetOf, verdict, takeProb,
     list: () => (STATE.rentals || []).slice(),
     state() {

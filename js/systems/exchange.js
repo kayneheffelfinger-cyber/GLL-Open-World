@@ -274,6 +274,7 @@ export const EXCH = (() => {
 
   return {
     open, empireInto, tick, pile, sell, sellAll, sellHalf, sellEverything,
+    rules: { LO, HI, STEP },   // v2.101 HELP BOOK
     price, mult, held, stockT, stockValue, list: () => RES.slice(), BASE: (window.MINE && MINE.BASE) || { Iron: 13, Copper: 22, Coal: 12, Bauxite: 15, Nickel: 24, Lignite: 12, Gypsum: 14, Salt: 16, Zinc: 19, Tin: 21, Silver: 26, Quartz: 17 },
     parOf,
     // v2.53 THE WORKS: the refined goods join the tradable list at boot

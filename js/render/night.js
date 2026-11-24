@@ -213,7 +213,7 @@ export const NIGHT = (() => {
     } catch (e) { console.error('[night]', e); }
   });
 
-  return { settle, show, maybeShow, summary: () => summary };
+  return { settle, show, maybeShow, summary: () => summary, rules: { CAP_HOURS: CAP_MS / 3600e3, DAY_SECONDS: DAY_MS / 1000 } };   // v2.101 HELP BOOK: the away-time cap, read live
 })();
 window.NIGHT = NIGHT;   // QA surface
 // (the settle invocation lives at the END of the module — see the
@@ -341,12 +341,11 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.100 — SAVE FILE', `
-    <p><b>Carry your game anywhere.</b></p>
-    <div class="kv"><span class="k">EXPORT</span><span class="v">Help window or start screen: download your world as a file on your device</span></div>
-    <div class="kv"><span class="k">IMPORT</span><span class="v">load a file back — checked first, shows what it replaces, one-step undo</span></div>
-    <div class="kv"><span class="k">WHY</span><span class="v">saves live per site address; a new address starts empty until you import</span></div>
-    <div class="kv"><span class="k">LOANS</span><span class="v">warnings now say how many days overdue and how many remain</span></div>
+  openModal('Welcome to v2.101 — HELP BOOK', `
+    <p><b>Help is now a book.</b></p>
+    <div class="kv"><span class="k">SECTIONS</span><span class="v">carts, land, building, mining, power, banks, rivals, saves — open any entry</span></div>
+    <div class="kv"><span class="k">SEARCH</span><span class="v">type a word to filter every entry</span></div>
+    <div class="kv"><span class="k">NUMBERS</span><span class="v">every cost and limit is read live from the game, so it is never out of date</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }
@@ -396,37 +395,8 @@ document.getElementById('bb-next').addEventListener('click', () => {
   }
 });
 
-function openHelp() {
-  openModal('Open World ' + GAME_VERSION + ' — Help', `
-    <div style="display:flex;gap:8px;margin:0 0 12px"><button class="btn primary" id="hp-gfx" style="flex:1">GRAPHICS SETTINGS — shadows · trees · render scale · detail</button></div>   <!-- v2.66 PICTURE: first thing in Help, no scrolling to find it -->
-    <p><b>Controls</b></p>
-    <div class="kv"><span class="k">MOVE</span><span class="v g">Tap / click anywhere — your tycoon walks there (the only way they move)</span></div>
-    <div class="kv"><span class="k">LOOK AROUND</span><span class="v">Drag or WASD / arrows / joystick to glide the bird\u2019s-eye view across the map — no distance cap, roam the whole Earth; detail streams wherever you look</span></div>
-    <div class="kv"><span class="k">ROTATE</span><span class="v">Right-drag (or Ctrl+drag) · touch: pinch zoom</span></div>
-    <div class="kv"><span class="k">ZOOM</span><span class="v">Wheel / pinch — gentle at street level, faster with altitude; zoom out to a 23,000 km whole-world view of the real Earth</span></div>
-    <div class="kv"><span class="k">FIND ME</span><span class="v">[C] or the crosshair button → snap back to your tycoon</span></div>
-    <div class="kv"><span class="k">THE HORIZON</span><span class="v">Every city already stands in the world at metro scale — walk in and the true downtown gains full detail</span></div>
-    <div class="kv"><span class="k">WALK TO A CITY</span><span class="v g">The gold pill above the bottom bar walks you to the nearest city — road-routed around lakes and seas, bridges included</span></div>
-    <div class="kv"><span class="k">WORLD MAP</span><span class="v">minimap (bottom right) · [M] or click it for the big map</span></div>
-    <div class="kv"><span class="k">THE EARTH</span><span class="v">the real planet at TRUE SCALE — 40,007 km around, real distances between cities. Cross continents by orbit flight, search or the world map [M]; sea bridges still span the straits</span></div>
-    <div class="kv"><span class="k">EMPIRE</span><span class="v">avatar (top right) → TELEPORT to any plot you own</span></div>
-    <div class="kv"><span class="k">BUILD</span><span class="v g">BUILD button → the catalog (house, shop, apartment block, factory shell) or <b>DESIGN YOUR OWN</b> — footprint, floors, style, a name; stock the materials (wood & stone at the yard; steel & glass at the yard or pulled from your ore-exchange stockpile), then PLACE — a 1 m grid overlays your plot, a ghost follows the cursor and a click sites it; buildings rise over real game days, pay every day and demolish back to 60% of their materials. City lots (15×20 m, the gold ⌂ marker) and roadside plots carry them — up to eight a plot</span></div>
-    <div class="kv"><span class="k">FACTORIES</span><span class="v g">Click a finished factory shell → MACHINES: twelve machines can stand on its floor — six heavy (packaging station, CNC, stamping press, assembly line, weld cell, injection molder) plus the six classics — each pays every day; the shell fades to a cutaway while you place them, and selling back pays 60%</span></div>   <!-- v2.61 FACTORY FLOOR -->
-    <div class="kv"><span class="k">OFFSHORE</span><span class="v g">MINE button → OFFSHORE → BUILD A RIG on open ocean (400 m off any coast, clear of your other rigs): $185,000 + 260 t steel + 60 t stone, then hire up to 32 workers — crude pumps into the rig's own 2,000 t tank (a short crew pumps slower), wages and upkeep come due daily, pressure falls as the field drains, and OFFLOAD moves the crude to the Ore Exchange for $2/t freight — decommission salvages 60%</span></div>   <!-- v2.62 DEEP WATER -->
-    <div class="kv"><span class="k">FURNISH</span><span class="v g">Hold a room or floor? FURNISH in its panel opens the furniture shop — craft pieces from shed materials or buy with cash, click to place (<b>R</b> rotates the ghost), and click any placed piece to turn, move or sell it back for 60% — computers sit on desks (place the desk first)</span></div>
-    <div class="kv"><span class="k">POWER</span><span class="v g">POWER button → every cart you run draws power — the meter spins, the grid bills each game day at a price that moves, and an unpaid bill cuts the power and the income until you pay (PAY &amp; RECONNECT at the cart’s panel or the POWER panel)</span></div>   <!-- v2.59 THE GRID -->
-    <div class="kv"><span class="k">SERVE</span><span class="v">[E] when standing at your cart</span></div>
-    <div class="kv"><span class="k">MARKET</span><span class="v">📈 button · limit &amp; market orders</span></div>
-    <p style="margin-top:12px"><b>The loop</b></p>
-    <p>Buy a green <b>$</b> plot → park a food cart → serve the queue yourself or hire star vendors → lease offices in the towers → trade the exchange → grow your net worth.</p>
-    <p style="font-size:11px;color:var(--dim)">Map data © OpenStreetMap contributors (ODbL). This game runs 100% in your browser; your world saves locally.</p>
-    <div style="display:flex;gap:8px;margin-top:14px">
-      <button class="btn" id="hp-tut" style="flex:1">REPLAY TUTORIAL</button>
-      <button class="btn" id="hp-x" style="flex:1">CLOSE</button>
-    </div>`);
-  document.getElementById('hp-x').onclick = closeModal;
-  document.getElementById('hp-tut').onclick = () => { closeModal(); TUT.restart(); };
-  document.getElementById('hp-gfx').onclick = () => { closeModal(); if (GFX) GFX.open(); };   // v2.66 PICTURE: the graphics settings panel (GFX arrives late-bound from boot.js)
+function openHelp() {   // v2.101 HELP BOOK: the sections, the search and every entry live in systems/helpbook.js (HELP arrives late via window)
+  try { window.HELP.open(); } catch (er) { console.error('[help]', er); toast('Help could not open.', 'warn'); }
 }
 
 // search box

@@ -67,6 +67,7 @@ export const MACH = (() => {
     { key: 'server', name: 'Server Rack', cost: 52000, inc: 1150, w: .75, d: .95, h: 1.95, body: 0x212f3d, top: 0x2e4053, led: 0x4dff88 },
   ];
   const CAP_MAX = 16;              // per-unit machine cap ceiling
+  const AREA_PER = 6;              // one machine per this many m² of your space (v2.101 HELP BOOK: named)
   const SELL_BACK = .6;            // sell a machine back for 60% (the property rate)
   const CLEAR = .8;                // min distance between machine centers
   const INSET = .45;               // keep off the walls (the furniture inset)
@@ -78,7 +79,7 @@ export const MACH = (() => {
   let lastGroup = null;            // city swap detector (the OH pattern)
   const built = new Map();         // bkey -> [{ o, g, led }]
 
-  const capOf = area => Math.min(CAP_MAX, Math.max(1, Math.floor((area || 12) / 6)));
+  const capOf = area => Math.min(CAP_MAX, Math.max(1, Math.floor((area || 12) / AREA_PER)));
   const yOf = fl => SLAB0 + fl * FH;
   const incOfDay = o => (o && o.machines || []).reduce((s, m) => s + (TYPES[m.t] ? TYPES[m.t].inc : 0), 0);
   const valueOfRooms = () => (STATE.rooms || []).reduce((s, r) => s + (r.machines || []).reduce((t, m) => t + (TYPES[m.t] ? TYPES[m.t].cost : 0), 0), 0);
@@ -436,6 +437,7 @@ export const MACH = (() => {
   return {
     tick, click, openShop, openShopFor, incOfDay, capOf, exitPlacing,
     TYPES,
+    rules: { CAP_MAX, AREA_PER, SELL_BACK },   // v2.101 HELP BOOK
     valueOfRooms,
     // QA: programmatic install (no modal, no ghost) — same validation
     install(bkey, kind, index, t, x, z) {

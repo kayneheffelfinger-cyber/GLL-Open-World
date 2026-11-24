@@ -854,6 +854,7 @@ export const OIL = (() => {
     nightSettle, offload, offloadAll, armPlacing, exitPlacing,
     crewOf, pumpTpd, pressureOf, costOfDay, netOfDay, valueOf, tankedAll,
     BASE, BILL, CAP: CAP_T, FULL_CREW, WAGE, UPKEEP, FREIGHT, PAR: BASE.Oil,
+    rules: { PRICE, MAX_RIGS, MIN_GAP, SHORE_CLR, SELL_BACK, BASE_TPD },   // v2.101 HELP BOOK
     list: () => rigs().slice(),
     count: () => rigs().length,
     // QA: programmatic build (same validation, same commit)

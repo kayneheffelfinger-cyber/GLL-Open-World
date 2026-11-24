@@ -37,6 +37,14 @@ export function __late(b) { ({ PWR, LORD } = b); }
 // ====================================================================
 
 export const ECO = (() => {
+  // v2.101 HELP BOOK: the numbers the player-facing text quotes, named once here so the Help book reads them live
+  const MAX_CREW = 5;          // vendors per cart
+  const SCRAP_BACK = 1000;     // $ a scrapped cart pays out
+  const OFFICE_CAP = 24;       // office suites you can lease
+  const OFFICE_DEPOSIT_DAYS = 2;   // lease deposit, in days of rent (non-refundable)
+  const SERVE_REACH = 6.5;     // m from your cart within which [E] / SERVE works
+  const VENDOR_FLOOR = 2.6, VENDOR_STAR = .55;   // a vendor serves every max(VENDOR_FLOOR, ECON.vendorInterval - stars * VENDOR_STAR) s
+  const vendorEvery = stars => Math.max(VENDOR_FLOOR, ECON.vendorInterval - stars * VENDOR_STAR);
   let carts = [];             // runtime cart objects for the ACTIVE region
   let floats = [];            // rising $ sprites
   let spawnT = 3;
@@ -394,7 +402,7 @@ export const ECO = (() => {
       for (const v of cart.vendors) {
         v.t += dt;
         v.fig.group.position.y = Math.sin(performance.now() / 400 + v.stars) * .015;
-        const interval = Math.max(2.6, ECON.vendorInterval - v.stars * .55);
+        const interval = vendorEvery(v.stars);
         if (v.t >= interval) {
           v.t = 0;
           if (cart.customers[0] && cart.customers[0].state === 'waiting') {
@@ -408,7 +416,7 @@ export const ECO = (() => {
     if (ACTORS.player) {
       for (const cart of carts) {
         const d = Math.hypot(ACTORS.player.group.position.x - cart.rec.x, ACTORS.player.group.position.z - cart.rec.z);
-        if (d < 6.5) { serveContext = cart; break; }
+        if (d < SERVE_REACH) { serveContext = cart; break; }
       }
     }
     updateServeBar();
@@ -587,7 +595,7 @@ export const ECO = (() => {
       const menuRows = cui.menu.map(m => `
         <tr><td>${m[0]}</td><td class="m">$${m[1].toFixed(2)}</td><td style="width:34%">${Math.round(m[2] * 100)}%
         <div class="apbar"><i style="width:${m[2] * 100}%"></i></div></td></tr>`).join('');
-      const slots = [0, 1, 2, 3, 4].map(i => {
+      const slots = Array.from({ length: MAX_CREW }, (_, i) => i).map(i => {
         const v = cart.vendors[i];
         if (v) return `<div class="worker-row"><div class="w"><div class="nm">👷 ${v.name}</div>
           <div class="st">${'★'.repeat(v.stars)}${'☆'.repeat(5 - v.stars)}</div><div class="ro">vendor</div></div>
@@ -602,7 +610,7 @@ export const ECO = (() => {
         <div id="kpis">
           <div class="kpi"><div class="k">REV / MIN</div><div class="v g">$${rpm.toFixed(2)}</div></div>
           <div class="kpi"><div class="k">CUSTOMERS</div><div class="v">${cart.served}</div></div>
-          <div class="kpi"><div class="k">CREW</div><div class="v">${cart.vendors.length}/5 · ${avgStars}★</div></div>
+          <div class="kpi"><div class="k">CREW</div><div class="v">${cart.vendors.length}/${MAX_CREW} · ${avgStars}★</div></div>
           <div class="kpi"><div class="k">APPEAL</div><div class="v">${appeal}%</div></div>
         </div>
         <div class="msec" style="margin-top:4px">Menu</div>
@@ -611,7 +619,7 @@ export const ECO = (() => {
         <div class="msec" style="margin-top:14px">Crew — hires off the street</div>
         <div id="slots">${slots}</div>
         <div style="display:flex;gap:8px;margin-top:14px">
-          <button class="btn bad" id="bs-scrap" style="flex:1">SCRAP CART ($1,000 back)</button>
+          <button class="btn bad" id="bs-scrap" style="flex:1">SCRAP CART (${fmt$(SCRAP_BACK)} back)</button>
           <button class="btn" id="bs-x" style="flex:1">CLOSE</button>
         </div>`);
       document.querySelectorAll('[data-hire]').forEach(b => {
@@ -648,10 +656,10 @@ export const ECO = (() => {
         cart.leaving.forEach(cu => ACTORS.removeFig(cu.fig));
         cart.vendors.forEach(v => ACTORS.removeFig(v.fig));
         carts = carts.filter(c => c !== cart);
-        earn(1000, false);
+        earn(SCRAP_BACK, false);
         saveGameSafe();
         closeModal();
-        toast('Cart scrapped — <b>$1,000</b> salvaged.');
+        toast('Cart scrapped — <b>' + fmt$(SCRAP_BACK) + '</b> salvaged.');
       };
       document.getElementById('bs-x').onclick = closeModal;
     };
@@ -678,8 +686,8 @@ export const ECO = (() => {
         <button class="btn" id="ol-x">CLOSE</button>
       </div>`);
     document.getElementById('ol-go').onclick = () => {
-      if (STATE.offices.length >= 24) { toast('<b>Office cap reached</b> (24).', 'warn'); return; }
-      const dep = suite.rate * 2;
+      if (STATE.offices.length >= OFFICE_CAP) { toast('<b>Office cap reached</b> (' + OFFICE_CAP + ').', 'warn'); return; }
+      const dep = suite.rate * OFFICE_DEPOSIT_DAYS;
       if (!spend(dep)) { toast('<b>Not enough money</b> for the $' + dep + ' deposit.', 'warn'); return; }
       STATE.offices.push({ id: 'of' + suite.bkey, cityKey: CITY.rec.key, bkey: suite.bkey, name: suite.name, sqm: suite.sqm, rate: suite.rate });
       saveGameSafe();
@@ -753,6 +761,7 @@ export const ECO = (() => {
   return {
     CUISINES, restoreCity, setRegion, clearCarts, update, hoverInfo, clickAt,
     openBusiness, openEmpire, recruit, hireFee, revPerMin, queueStats,
+    rules: { MAX_CREW, SCRAP_BACK, OFFICE_CAP, OFFICE_DEPOSIT_DAYS, SERVE_REACH, vendorEvery },   // v2.101 HELP BOOK
     bindTravel, teleportToPlot, plotStand, plotLabel, cityNameOf, arrivalPulse,
     get region() { return region; },   // v2.10
     get serveContext() { return serveContext; },

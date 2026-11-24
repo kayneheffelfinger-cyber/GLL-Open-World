@@ -52,6 +52,7 @@ import { TRAFFIC } from './systems/traffic.js';   // v2.68 RUSH HOUR: ambient ca
 import './systems/landmarks.js';   // v2.69 REGIONAL CHARACTER: real landmarks at their true spots — wraps CITY.build (drops the plain OSM block under each, adds the landmark meshes), so nothing earlier here needs to change
 import './systems/sky.js';   // v2.95 SKY: drifting clouds + a sun glow on the sky dome — wraps WORLD.update, render/main.js is untouched; the horizon row stays the water blue (no fog)
 import './systems/proplod.js';   // v2.97 PROP LOD: small props and trees hide from a high camera (hysteresis) — wraps WORLD.update; city.js parents them to CITY.propGroup / CITY.treeGroup
+import './systems/helpbook.js';   // v2.101 HELP BOOK: the sections + search behind HELP (night.js openHelp calls window.HELP.open); reads every number live from each system's rules
 
 // ---- late binding -------------------------------------------------------
 // The original single script resolved these forward references through
@@ -71,4 +72,4 @@ exchLate({ WORKS });
 try { CO.init().catch(() => { }); } catch (e) { console.error('[companies]', e); }   // v2.77 COMPANIES: one status request on the hosted site, nothing anywhere else
 try { GFX.apply(); } catch (e) { console.error('[gfx]', e); }   // v2.66 PICTURE: the saved picture applies once the save has loaded (loadGame runs inside render/main.js's module body, before this line)
 try { NIGHT.settle(); } catch (e) { console.error('[night]', e); }   // v2.55 NIGHT SHIFT: settle the offline gap — invoked here, at the END of the module, so ECO/MINE/WORKS are all up (the boot screen blocks until the ready log, so no click can beat it)
-console.log('%cOPEN WORLD v2.100 — SAVE FILE', 'color:#38BDF8;font-weight:700', 'ready.');
+console.log('%cOPEN WORLD v2.101 — HELP BOOK', 'color:#38BDF8;font-weight:700', 'ready.');

@@ -310,6 +310,7 @@ export const LOAN = (() => {
     take, pay, payMin, payOff, setAuto, quote, schedule, stageInfo, seizable,
     score, rating, aprFor, maxTotal, creditFactor, owed, overdueTotal, room,
     X, GRACE, TERMS, MAX_LOANS,
+    rules: { FEE_PCT, FEE_MIN, DROP1, DROP_N, SEIZE_BANK, SEIZE_PROP, MIN_AMT, MAX_AMT, MIN_SCORE },   // v2.101 HELP BOOK
     list: () => loans().slice(),
     get state() { return L(); },
     // QA: run n game days (the loan beat rides BANK's day, exactly like play); set the score

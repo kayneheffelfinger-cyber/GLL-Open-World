@@ -263,6 +263,7 @@ export const WORKS = (() => {
 
   return {
     open, mineInto, empireInto, tick, buy, scrap,
+    rules: { POWER, SELL_BACK },   // v2.101 HELP BOOK
     goods: () => MACH.map(T => T.out), BASE, inOf: r => INOF[r] || null,
     count: cnt, machines, list: () => MACH.map(T => ({ id: T.id, name: T.name, cost: T.cost, tpd: T.tpd, n: T.n, in: T.in, out: T.out, par: T.par, n_owned: cnt(T.id) })),
     // QA: run whole game-days of pouring instantly (same math as the beat)

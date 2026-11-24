@@ -650,6 +650,7 @@ export const GEN = (() => {
   return {
     tick, click, tip, empireInto, panelInto, nightSettle, arm, disarm, build, demolish, toggle, siteOk, onRiver,
     TYPES, MAX_UNITS, list: () => units().slice(),
+    rules: { SELL_BACK, SPOT, GAP, ORDER },   // v2.101 HELP BOOK
     placing: () => placing,
     arrears: p => { try { const e = STATE.pow.b[p.id]; return !!(e && e.cut); } catch (er) { return false; } },
     isBlackout: p => !!shed[p && p.id || p],

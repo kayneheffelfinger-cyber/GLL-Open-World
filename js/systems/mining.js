@@ -1032,6 +1032,7 @@ export const MINE = (() => {
 
   return {
     openPanel, openShop, openManage, travelTo, tick, click, tip, empireInto,
+    rules: { SNAP, MIN_SIDE, MAX_SIDE, CLAIM_RATE, DENS, CAP_MAX, MAX_MINES, SELL_BACK, WAGE, MAX_CREW, SUB_R },   // v2.101 HELP BOOK
     stageOf, rimOf, capOf, incOfDay, mineAt, valueOf, armStake,
     crewOf, opsOf, capTpd, digTpd, wageOfDay,          // v2.50 HIRED HANDS
     BASE, resOf, priceOfRes, priceOf,                  // v2.52 ORE EXCHANGE (par prices, resource keys, today's $/t)

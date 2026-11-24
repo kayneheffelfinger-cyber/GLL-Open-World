@@ -501,6 +501,7 @@ export const FACT = (() => {
   return {
     tick, click, openShop, empireInto, exitPlacing, incomeOf,
     FTYPES, TOF, CAP,
+    rules: { SELL_BACK },   // v2.101 HELP BOOK
     valueOf,
     // QA: programmatic install (no modal, no ghost) — same validation
     install(plotId, i, t, lx, lz) {

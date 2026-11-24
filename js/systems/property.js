@@ -371,6 +371,7 @@ export const PROP = (() => {
 
   return {
     tick, dealInto, travelTo, openManage, status, rateOf, priceOf, incOf,
+    rules: { CAP, BUY_MULT, OWN_YIELD, DEPOSIT, SELL_BACK },   // v2.101 HELP BOOK
     list: () => (STATE.rooms || []).slice(),
     count: () => (STATE.rooms || []).length,
     // QA: programmatic purchase/rent of the OPEN building's unit (no modal)
