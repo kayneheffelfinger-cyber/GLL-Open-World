@@ -48,7 +48,7 @@ bad.length = 0;   // the five deliberate rejections above warned
 const money0 = await moneyNow();
 assert.deepEqual(await regTest(), ['tc1:available', 'tc2:locked', 'tc3:available']);
 await E(() => document.getElementById('b-help').click()); await page.waitForSelector('#hp-academy');
-await page.click('#hp-academy'); await page.waitForSelector('#gd-list-mark');
+await page.click('#hp-academy'); await page.waitForSelector('#gd-list-mark', { state: 'attached' });
 let listTxt = await page.innerText('#mbody'); assert.match(listTxt, /Test tc1/); assert.match(listTxt, /LOCKED/); assert.match(listTxt, /Unlock flag first/); assert.match(listTxt, /NEW/);
 assert.equal(await page.locator('[data-gl="start"][data-v="tc2"]').count(), 0, 'a locked chapter has no START');
 ok('the engine starts empty (no Academy button, bad chapters refused); registering shows ACADEMY in HELP; the list shows NEW and LOCKED (with why)');
@@ -127,7 +127,7 @@ assert.equal(await E(() => GUIDE.start('tc1').ok), false, 'START is refused whil
 assert.match(await E(() => document.getElementById('toasts').innerText), /starter guide/i);
 await E(() => { GUIDE.go('tc1', 0); }); await wait(900);
 assert.equal(await chip(), null, 'the Academy chip stays hidden under the starter guide'); assert.equal(await E(() => !document.getElementById('tut').classList.contains('hidden')), true);
-await E(() => { document.getElementById('b-help').click(); }); await page.waitForSelector('#hp-academy'); await page.click('#hp-academy'); await page.waitForSelector('#gd-list-mark');
+await E(() => { document.getElementById('b-help').click(); }); await page.waitForSelector('#hp-academy'); await page.click('#hp-academy'); await page.waitForSelector('#gd-list-mark', { state: 'attached' });
 assert.match(await page.innerText('#mbody'), /starter guide is still running/i); assert.equal(await page.locator('[data-gl="start"]:not([disabled])').count(), 0);
 await E(() => document.getElementById('modalwrap').classList.add('hidden'));
 assert.equal(await E(() => GUIDE.state().sug.starter), undefined, 'no suggestion while the starter guide runs');
@@ -157,7 +157,7 @@ await E(() => { GUIDE.start('tc1'); }); await wait(600);
 await page.setViewportSize({ width: 390, height: 800 }); await wait(500);
 const r = await E(() => { const c = document.getElementById('gd'); const b = c.getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top, b: b.bottom, vw: innerWidth, hidden: c.classList.contains('hidden'), sw: document.documentElement.scrollWidth }; });
 assert.ok(!r.hidden && r.l >= 0 && r.r <= 390 && r.b < 800 - 120, 'the chip fits a 390 px phone and clears the bottom bar: ' + JSON.stringify(r)); assert.ok(r.sw <= 390, 'no horizontal page scroll');
-await E(() => { document.getElementById('b-help').click(); }); await page.waitForSelector('#hp-academy'); await page.click('#hp-academy'); await page.waitForSelector('#gd-list-mark');
+await E(() => { document.getElementById('b-help').click(); }); await page.waitForSelector('#hp-academy'); await page.click('#hp-academy'); await page.waitForSelector('#gd-list-mark', { state: 'attached' });
 const lw = await E(() => { const m = document.getElementById('mbody'); return [m.scrollWidth, m.clientWidth]; }); assert.ok(lw[0] <= lw[1] + 1, 'the chapter list fits at phone width: ' + lw);
 await page.screenshot({ path: process.env.SHOTS ? join(process.env.SHOTS, 'academy-phone.png') : undefined }).catch(() => { });
 await E(() => document.getElementById('modalwrap').classList.add('hidden')); await page.setViewportSize({ width: 1280, height: 800 });
