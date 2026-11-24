@@ -203,6 +203,18 @@ export function loadGame() {
       out.log = (Array.isArray(__l.log) ? __l.log : []).slice(-40).filter(e => e && typeof e.text === 'string').map(e => ({ day: Math.floor(__m(e.day, 0, 1e7)), text: e.text.slice(0, 140) }));
       STATE.loan = out;
     }
+    // v2.101 BUSINESS ACADEMY: guide progress (absent on older saves — nothing started). Chapter ids are registered later
+    // by other files, so only the SHAPE is checked here; unknown ids and out-of-range steps are pruned once boot is done.
+    {
+      const __g = (p.guide && typeof p.guide === 'object' && !Array.isArray(p.guide)) ? p.guide : {};
+      const __id = k => typeof k === 'string' && /^[a-z0-9_-]{1,32}$/.test(k);
+      const out = { cur: __id(__g.cur) ? __g.cur : null, done: {}, step: {}, sug: {} };
+      for (const [f, kind] of [['done', 'b'], ['sug', 'b'], ['step', 'n']]) {
+        const src = (__g[f] && typeof __g[f] === 'object' && !Array.isArray(__g[f])) ? __g[f] : {};
+        for (const k of Object.keys(src).slice(0, 60)) { if (!__id(k)) continue; if (kind === 'b') { if (src[k]) out[f][k] = true; } else { const n = Math.floor(+src[k]); if (isFinite(n)) out[f][k] = Math.max(0, Math.min(999, n)); } }
+      }
+      STATE.guide = out;
+    }
     // v2.62 DEEP WATER: the offshore oil rigs (absent on older saves — none built)
     STATE.rigs = (p.rigs || []).filter(r => r && typeof r.id === 'string' && r.id.charAt(0) === 'r' && isFinite(+r.x) && isFinite(+r.z) && +r.ore > 0)
       .slice(0, 8)
@@ -270,6 +282,7 @@ export function saveGame() {
       co: (() => { const c = STATE.co || {}; const o = { pend: {}, seq: c.seq || {}, claimed: (c.claimed || []).slice(-200) }; for (const k in (c.pend || {})) if (+c.pend[k] > 0) o.pend[k] = +(+c.pend[k]).toFixed(2); if (c.inflight) o.inflight = c.inflight; return o; })(),   // v2.77 COMPANIES (optional field — older builds ignore it)
       bank: (() => { const b = STATE.bank || {}; return { day: b.day | 0, seq: b.seq | 0, method: b.method || 'cash', accts: b.accts || {}, debit: b.debit || {}, cc: b.cc || {}, ledger: (b.ledger || []).slice(-300), stmts: (b.stmts || []).slice(-48), inbound: (b.inbound || []).slice(0, 10) }; })(),   // v2.80 BANKS (optional field — older builds ignore it)
       loan: (() => { const l = STATE.loan || {}; return { score: l.score | 0 || 700, seq: l.seq | 0, lastMonth: l.lastMonth | 0, hist: l.hist || {}, loans: (l.loans || []).slice(0, 3), log: (l.log || []).slice(-40) }; })(),   // v2.82 LOANS (optional field — older builds ignore it)
+      guide: (() => { const g = STATE.guide || {}; return { cur: g.cur || null, done: g.done || {}, step: g.step || {}, sug: g.sug || {} }; })(),   // v2.101 BUSINESS ACADEMY (optional field — older builds ignore it)
       gfx: STATE.gfx ? { sh: STATE.gfx.shadows === false ? 0 : 1, tr: STATE.gfx.trees === false ? 0 : 1, sc: STATE.gfx.scale === .75 || STATE.gfx.scale === .5 ? STATE.gfx.scale : 1, lt: STATE.gfx.lite ? 1 : 0, tn: STATE.gfx.tone === 'classic' ? 0 : 1 } : null,   // v2.66 PICTURE (optional field — older builds ignore it)
       dsg: (STATE.designs || []).slice(0, 12).map(d => ({ n: d.name, w: +d.w || 10, d: +d.d || 8, f: d.floors | 0, s: d.style || 'brick' })),   // v2.67 THE ARCHITECT (optional field — older builds ignore it; cost/days/income re-derive on load, so a balance tweak in a later build re-prices old designs honestly)
       market: STATE.market ? STATE.market.pack() : null,

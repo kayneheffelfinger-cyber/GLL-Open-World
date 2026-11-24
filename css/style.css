@@ -817,3 +817,22 @@ table.menu td.m{font-family:var(--mono);color:var(--green)}
 .hb-body small{color:var(--dim)}
 .hb-n{color:var(--green2,#68d391);font-family:var(--mono)}.hb-b{color:#f5cc74}
 .hb-fail{color:#fca5a5}.hb-attr{font-size:11px;color:var(--dim);margin-top:12px}
+/* ================= BUSINESS ACADEMY (v2.101): the active-step chip, same look and corner as the starter guide's #tut ================= */
+#gd,#gd-sug{position:absolute;left:12px;width:266px;padding:12px 14px;z-index:40}
+#gd{top:112px}
+#gd-sug{top:auto;bottom:150px;border-color:rgba(125,211,252,.45)}
+#gd .th,#gd-sug .th{display:flex;align-items:center;gap:8px}
+#gd .n,#gd-sug .n{font-family:var(--mono);font-size:10px;font-weight:800;color:#0D1117;background:#7DD3FC;border-radius:3px;padding:2px 7px;letter-spacing:.5px;flex:none}
+#gd .t,#gd-sug .t{font-size:12px;font-weight:800;letter-spacing:.7px;color:#F7FAFC;flex:1;text-transform:uppercase;line-height:1.25}
+.gd-x{color:var(--dim);font-size:13px;padding:1px 4px;flex:none}.gd-x:hover{color:#FCA5A5}
+#gd .b,#gd-sug .b{font-size:11.5px;line-height:1.55;color:var(--mut);margin-top:8px}
+#gd .b b{color:var(--green2)}
+#gd .o{font-family:var(--mono);font-size:10.5px;line-height:1.5;color:#7DD3FC;margin-top:9px;border-top:1px solid var(--line2);padding-top:8px}
+.gd-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.gd-btns .tpbtn{margin:0}
+.gd-sum{margin:0;padding-left:16px}.gd-sum li{list-style:none;margin-left:-16px}
+.gd-ch{padding:9px 0;border-bottom:1px solid rgba(255,255,255,.07)}.gd-ch:last-of-type{border-bottom:0}
+.gd-ch.locked{opacity:.6}
+.gd-chh{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.gd-st{font-size:9px;font-weight:800;letter-spacing:1px;padding:2px 7px;border-radius:4px;background:rgba(255,255,255,.08);color:var(--mut);white-space:nowrap}
+.gd-st.done{background:rgba(72,187,120,.18);color:var(--green2)}.gd-st.progress{background:rgba(125,211,252,.18);color:#7DD3FC}.gd-st.available{background:rgba(245,204,116,.18);color:#F5CC74}
+@media (max-width:640px){#gd,#gd-sug{left:8px;width:min(226px,calc(100vw - 16px));padding:10px 12px}#gd{top:96px}#gd .b,#gd-sug .b{font-size:11px}#gd-sug{bottom:130px}}
