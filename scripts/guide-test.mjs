@@ -48,6 +48,8 @@ bad.length = 0;   // the five deliberate rejections above warned
 const money0 = await moneyNow();
 assert.deepEqual(await regTest(), ['tc1:available', 'tc2:locked', 'tc3:available']);
 await E(() => document.getElementById('b-help').click()); await page.waitForSelector('#hp-academy');
+assert.equal(await page.locator('#hp-academy-slot #hp-academy').count(), 1, 'the ACADEMY button sits in the Help book\'s slot');
+await E(() => document.getElementById('modalwrap').classList.add('hidden')); await E(() => document.getElementById('b-help').click()); await page.waitForSelector('#hp-academy-slot #hp-academy');   // Help re-renders on every open: the button is filled again
 await page.click('#hp-academy'); await page.waitForSelector('#gd-list-mark', { state: 'attached' });
 let listTxt = await page.innerText('#mbody'); assert.match(listTxt, /test tc1/i); assert.match(listTxt, /LOCKED/); assert.match(listTxt, /Unlock flag first/); assert.match(listTxt, /NEW/);
 assert.equal(await page.locator('[data-gl="start"][data-v="tc2"]').count(), 0, 'a locked chapter has no START');

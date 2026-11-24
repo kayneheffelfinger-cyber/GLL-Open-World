@@ -341,11 +341,11 @@ function checkForUpdate() {
 function openWhatsNew() {
   STATE.seenNews = GAME_VERSION;
   saveGame();
-  openModal('Welcome to v2.101 — HELP BOOK', `
-    <p><b>Help is now a book.</b></p>
-    <div class="kv"><span class="k">SECTIONS</span><span class="v">carts, land, building, mining, power, banks, rivals, saves — open any entry</span></div>
-    <div class="kv"><span class="k">SEARCH</span><span class="v">type a word to filter every entry</span></div>
-    <div class="kv"><span class="k">NUMBERS</span><span class="v">every cost and limit is read live from the game, so it is never out of date</span></div>
+  openModal('Welcome to v2.102 — BUSINESS ACADEMY', `
+    <p><b>Guided chapters are coming.</b></p>
+    <div class="kv"><span class="k">ACADEMY</span><span class="v">HELP › ACADEMY (appears when the first chapters arrive)</span></div>
+    <div class="kv"><span class="k">HOW</span><span class="v">each step is checked against what you really did — never a timer, never a skip</span></div>
+    <div class="kv"><span class="k">YOURS</span><span class="v">close, resume or replay any chapter; it never costs or pays you anything</span></div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" id="wn-x" style="flex:1">EXPLORE</button></div>`);
   document.getElementById('wn-x').onclick = () => { closeModal(); setTimeout(autoEnterLast, 250); };
 }

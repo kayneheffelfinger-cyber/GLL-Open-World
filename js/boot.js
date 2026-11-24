@@ -47,7 +47,7 @@ import { STK } from './systems/companystocks.js';   // v2.77 COMPANIES: company 
 import { BANK } from './systems/banks.js';   // v2.80 BANKS: city banks, cards, ledger, statements — after companies (the company bank transfers) and rivals; wraps spend() via economy.js and the update/empire chains
 import { LOAN } from './systems/loans.js';   // v2.82 LOANS: loans, credit score, escalation, dashboard tab — after banks (rides BANK's game-day beat, adds a BANK tab); never touched by the Night Shift
 import { SAVEIO } from './systems/saveio.js';   // v2.100 SAVE FILE: EXPORT SAVE / IMPORT SAVE (Help window + boot screen) — validates with the game's own loadGame; hosted imports sync like any save
-import { GUIDE } from './systems/guide.js';   // v2.101 BUSINESS ACADEMY: the guide engine — chapter files import it and call GUIDE.register(); needs the starter guide (tutorial) for its priority rule
+import { GUIDE } from './systems/guide.js';   // v2.102 BUSINESS ACADEMY: the guide engine — chapter files import it and call GUIDE.register(); needs the starter guide (tutorial) for its priority rule
 import { GFX } from './systems/graphics.js';   // v2.66 PICTURE: the graphics settings behind the Help tab's GRAPHICS button
 import { TRAFFIC } from './systems/traffic.js';   // v2.68 RUSH HOUR: ambient cars on the real road net — wraps ACTORS.spawnCitizens/reset/updateCitizens, so nothing earlier here needs to change
 import './systems/landmarks.js';   // v2.69 REGIONAL CHARACTER: real landmarks at their true spots — wraps CITY.build (drops the plain OSM block under each, adds the landmark meshes), so nothing earlier here needs to change
@@ -71,7 +71,7 @@ rivLate({ EXCH, BLD, FURN });
 exchLate({ WORKS });
 
 try { CO.init().catch(() => { }); } catch (e) { console.error('[companies]', e); }   // v2.77 COMPANIES: one status request on the hosted site, nothing anywhere else
-try { GUIDE.ready(); } catch (e) { console.error('[guide]', e); }   // v2.101: every chapter file has registered by now, so saved progress can be pruned against the real chapter list
+try { GUIDE.ready(); } catch (e) { console.error('[guide]', e); }   // v2.102: every chapter file has registered by now, so saved progress can be pruned against the real chapter list
 try { GFX.apply(); } catch (e) { console.error('[gfx]', e); }   // v2.66 PICTURE: the saved picture applies once the save has loaded (loadGame runs inside render/main.js's module body, before this line)
 try { NIGHT.settle(); } catch (e) { console.error('[night]', e); }   // v2.55 NIGHT SHIFT: settle the offline gap — invoked here, at the END of the module, so ECO/MINE/WORKS are all up (the boot screen blocks until the ready log, so no click can beat it)
-console.log('%cOPEN WORLD v2.101 — HELP BOOK', 'color:#38BDF8;font-weight:700', 'ready.');
+console.log('%cOPEN WORLD v2.102 — BUSINESS ACADEMY', 'color:#38BDF8;font-weight:700', 'ready.');

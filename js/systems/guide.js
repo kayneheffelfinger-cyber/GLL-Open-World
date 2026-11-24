@@ -68,9 +68,10 @@ import { TUT } from '../systems/tutorial.js';
 //   * UI: a quest chip (same look as the starter guide's, same corner) shows the active step. While the starter guide
 //     is active the chip stays hidden and START is refused: the starter guide wins. The chip's X closes the chapter
 //     (progress is kept: RESUME it from HELP > ACADEMY). A finished chapter shows a non-blocking summary card.
-//     HELP gets an ACADEMY button (id hp-academy) once at least one chapter is registered. The engine injects it by
-//     itself (after #hp-gfx, or at the top of the Help window); if a rewritten Help already contains an element
-//     with id hp-academy the engine just wires it instead.
+//     HELP gets an ACADEMY button (id hp-academy) once at least one chapter is registered. The engine fills the empty
+//     <div id="hp-academy-slot"> that the Help book leaves for it (a delegated click on #b-help, then a tick, so it
+//     works every time Help re-renders); without the slot it falls back to after #hp-gfx. If an element with id
+//     hp-academy already exists it is wired as is.
 //   * Suggestions: when the starter guide is finished, and when a chapter's opened() first turns true, a small card
 //     offers the matching chapter once. Remembered in the save (sug).
 //   * Never in the way: no modal opens by itself, no input is blocked, it works on touch and at phone width.
@@ -273,11 +274,15 @@ export const GUIDE = (() => {
     const body = document.getElementById('mbody'); if (!body || !/Help/.test(document.getElementById('mtitle').textContent || '')) return;
     let btn = document.getElementById('hp-academy');
     if (!btn) {
-      const row = document.createElement('div'); row.id = 'gd-help-row'; row.style.cssText = 'display:flex;gap:8px;margin:0 0 12px';
-      row.innerHTML = '<button class="btn primary" id="hp-academy" style="flex:1">ACADEMY — guided chapters</button>';
-      const gfx = document.getElementById('hp-gfx');
-      if (gfx && gfx.parentElement && gfx.parentElement.parentElement) gfx.parentElement.insertAdjacentElement('afterend', row); else body.insertBefore(row, body.firstChild);
-      btn = row.firstElementChild;
+      const html = '<button class="btn primary" id="hp-academy" style="flex:1">ACADEMY — guided chapters</button>';
+      const slot = document.getElementById('hp-academy-slot');          // the Help book (js/systems/helpbook.js) leaves this empty slot for the Academy
+      if (slot) { slot.innerHTML = '<div style="display:flex;gap:8px;margin:0 0 12px">' + html + '</div>'; }
+      else {                                                            // an older Help without the slot: after #hp-gfx, or at the top
+        const row = document.createElement('div'); row.id = 'gd-help-row'; row.style.cssText = 'display:flex;gap:8px;margin:0 0 12px'; row.innerHTML = html;
+        const gfx = document.getElementById('hp-gfx');
+        if (gfx && gfx.parentElement && gfx.parentElement.parentElement) gfx.parentElement.insertAdjacentElement('afterend', row); else body.insertBefore(row, body.firstChild);
+      }
+      btn = document.getElementById('hp-academy');
     }
     btn.onclick = () => { closeModal(); openList(); };
   }
