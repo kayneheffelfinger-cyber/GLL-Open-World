@@ -150,7 +150,7 @@ ok('after the starter guide a card offers the first chapter once (START works); 
 assert.equal(await moneyNow() >= 0, true);
 
 // ---- D. world beacon, phone width, nothing blocking
-await E(() => { window.__f = { a: 1, b: 1 }; GUIDE.start('tc1'); }); await wait(1200);
+await E(() => { window.__f = {}; GUIDE.go('tc1', 2); }); await wait(1300);   // jump to the step that has a tgt()
 assert.equal(await E(() => GUIDE.state().beacon), true, 'a step with tgt() draws the beacon in the city');
 await E(() => { window.__f.c = 1; }); await page.waitForFunction(() => GUIDE.state().done.tc1 && !GUIDE.state().beacon, null, { timeout: 5000 });
 await E(() => { GUIDE.start('tc1'); }); await wait(600);
