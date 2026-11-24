@@ -49,7 +49,7 @@ const money0 = await moneyNow();
 assert.deepEqual(await regTest(), ['tc1:available', 'tc2:locked', 'tc3:available']);
 await E(() => document.getElementById('b-help').click()); await page.waitForSelector('#hp-academy');
 await page.click('#hp-academy'); await page.waitForSelector('#gd-list-mark', { state: 'attached' });
-let listTxt = await page.innerText('#mbody'); assert.match(listTxt, /Test tc1/); assert.match(listTxt, /LOCKED/); assert.match(listTxt, /Unlock flag first/); assert.match(listTxt, /NEW/);
+let listTxt = await page.innerText('#mbody'); assert.match(listTxt, /test tc1/i); assert.match(listTxt, /LOCKED/); assert.match(listTxt, /Unlock flag first/); assert.match(listTxt, /NEW/);
 assert.equal(await page.locator('[data-gl="start"][data-v="tc2"]').count(), 0, 'a locked chapter has no START');
 ok('the engine starts empty (no Academy button, bad chapters refused); registering shows ACADEMY in HELP; the list shows NEW and LOCKED (with why)');
 
@@ -76,7 +76,7 @@ assert.match(await page.innerText('#mbody'), /IN PROGRESS · step 2\/3/);
 await page.click('[data-gl="resume"][data-v="tc1"]'); await wait(500); assert.equal(await E(() => GUIDE.state().step), 1); assert.match(await chip(), /Do B/);
 await E(() => { window.__f.b = 1; }); await page.waitForFunction(() => GUIDE.state().step === 2 || GUIDE.state().done.tc1, null, { timeout: 5000 });   // step C's flag is already set, so it completes right after
 await page.waitForFunction(() => GUIDE.state().done.tc1, null, { timeout: 5000 });
-const sum = await chip(); assert.match(sum, /DONE/); assert.match(sum, /Test tc1/); assert.match(sum, /NEXT/); assert.match(sum, /REPLAY/);
+const sum = await chip(); assert.match(sum, /done/i); assert.match(sum, /test tc1/i); assert.match(sum, /NEXT/); assert.match(sum, /REPLAY/);
 assert.equal(await E(() => GUIDE.state().cur), null);
 ok('START from the list; SHOW ME runs the step\'s open(); steps advance only on the real check; X closes and RESUME comes back at the same step; a finished chapter shows the summary card');
 // replay
@@ -97,7 +97,7 @@ const pk = await E(() => JSON.parse(localStorage.getItem('openworld-v2'))); asse
 await page.reload(); await page.waitForFunction(() => window.GUIDE, null, { timeout: 20000 }); await wait(1200);
 assert.equal(await E(() => GUIDE.state().cur), 'tc1'); assert.equal(await E(() => GUIDE.state().done.tc1), true);
 await regTest(); await enter(); await wait(900);
-assert.equal(await E(() => GUIDE.state().cur), 'tc1'); assert.match(await chip(), /Test tc1/);
+assert.equal(await E(() => GUIDE.state().cur), 'tc1'); assert.match(await chip(), /test tc1/i);
 ok('progress (active chapter, done marks, steps) is saved in the pack field `guide` and survives a reload; the chip comes back by itself');
 // unknown ids dropped, steps clamped (after boot has registered the chapters)
 await E(async () => { const raw = JSON.parse(localStorage.getItem('openworld-v2')); raw.guide = { cur: 'ghost', done: { ghost: true, tc1: true }, step: { ghost: 4, tc1: 99, tc3: -5 }, sug: { ghost: true, starter: true } }; localStorage.setItem('openworld-v2', JSON.stringify(raw)); STATE.mode = 'boot'; });
@@ -137,13 +137,13 @@ assert.equal(await E(() => TUT.state().done), true);
 await page.waitForFunction(() => !!document.getElementById('gd') && !document.getElementById('gd').classList.contains('hidden'), null, { timeout: 5000 });   // the chapter we had selected shows again
 assert.match(await chip(), /Do A/); await E(() => GUIDE.skip());
 await E(() => { GUIDE.reset(); }); await page.waitForSelector('#gd-sug:not(.hidden)', { timeout: 6000 });
-const sugTxt = await page.innerText('#gd-sug'); assert.match(sugTxt, /Test tc1/); assert.match(sugTxt, /starter guide is done/i);
+const sugTxt = await page.innerText('#gd-sug'); assert.match(sugTxt, /test tc1/i); assert.match(sugTxt, /starter guide is done/i);
 assert.equal(await E(() => document.getElementById('modalwrap').classList.contains('hidden')), true, 'a suggestion is a small card, never a modal');
 assert.equal(await E(() => GUIDE.state().sug.starter), true);
 await page.click('#gd-sug [data-gs="go"]'); await wait(600); assert.equal(await E(() => GUIDE.state().cur), 'tc1'); await E(() => GUIDE.skip());
 // panel-open suggestion: fires once, on the false -> true edge
 await E(() => { window.__f.panel = 0; }); await wait(900); await E(() => { window.__f.panel = 1; });
-await page.waitForSelector('#gd-sug:not(.hidden)', { timeout: 6000 }); assert.match(await page.innerText('#gd-sug'), /Test tc3/); assert.match(await page.innerText('#gd-sug'), /first time/);
+await page.waitForSelector('#gd-sug:not(.hidden)', { timeout: 6000 }); assert.match(await page.innerText('#gd-sug'), /test tc3/i); assert.match(await page.innerText('#gd-sug'), /first time/);
 await page.click('#gd-sug [data-gs="no"]'); await E(() => { window.__f.panel = 0; }); await wait(900); await E(() => { window.__f.panel = 1; }); await wait(1500);
 assert.equal(await page.locator('#gd-sug:not(.hidden)').count(), 0, 'each chapter is suggested once'); assert.equal(await E(() => GUIDE.state().sug.tc3), true);
 ok('after the starter guide a card offers the first chapter once (START works); opening a system\'s panel offers its chapter once; both are remembered in the save');
