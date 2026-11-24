@@ -283,7 +283,7 @@ export const GUIDE = (() => {
   }
 
   // ---- suggestions (once each, remembered in the save) --------------------------------------------------
-  let sug = null;
+  let sug = null, sugTimer = 0;
   function suggest(ch, why) {
     const g = G(), now = Date.now();
     if (now - lastSugAt < sugGap) return false;
@@ -297,7 +297,7 @@ export const GUIDE = (() => {
     lastSugAt = now; g.sug[ch.id] = true; try { saveGame(); } catch (e) { }
     sug.innerHTML = '<div class="th"><span class="n">TIP</span><span class="t">' + esc(ch.icon + ' ' + ch.title) + '</span><button class="gd-x" data-gs="no" title="Dismiss">✕</button></div><div class="b">' + esc(why) + '</div><div class="gd-btns"><button class="tpbtn" data-gs="go" data-v="' + ch.id + '">START</button><button class="tpbtn" data-gs="no">NOT NOW</button></div>';
     sug.classList.remove('hidden');
-    setTimeout(() => { if (sug) sug.classList.add('hidden'); }, 18000);
+    clearTimeout(sugTimer); sugTimer = setTimeout(() => { if (sug) sug.classList.add('hidden'); }, 18000);   // one timer: a newer card must not be hidden by an older card's timeout
     return true;
   }
   function suggestions() {
