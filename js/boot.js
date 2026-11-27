@@ -74,4 +74,5 @@ try { CO.init().catch(() => { }); } catch (e) { console.error('[companies]', e);
 try { GUIDE.ready(); } catch (e) { console.error('[guide]', e); }   // v2.102: every chapter file has registered by now, so saved progress can be pruned against the real chapter list
 try { GFX.apply(); } catch (e) { console.error('[gfx]', e); }   // v2.66 PICTURE: the saved picture applies once the save has loaded (loadGame runs inside render/main.js's module body, before this line)
 try { NIGHT.settle(); } catch (e) { console.error('[night]', e); }   // v2.55 NIGHT SHIFT: settle the offline gap — invoked here, at the END of the module, so ECO/MINE/WORKS are all up (the boot screen blocks until the ready log, so no click can beat it)
+import('./systems/riftparcels.js').catch(e => console.warn('[riftparcels] not loaded', e));   // v2.103 RIFT PARCELS: gold frame + YOURS tag on owned sidewalk spots — a dynamic import, so a fault in that file can never stop the game booting
 console.log('%cOPEN WORLD v2.102 — BUSINESS ACADEMY', 'color:#38BDF8;font-weight:700', 'ready.');
